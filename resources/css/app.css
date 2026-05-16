@@ -1,0 +1,372 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+@layer components {
+    .app-shell {
+        @apply grid min-h-screen grid-cols-1 lg:grid-cols-[18rem_1fr];
+    }
+
+    .app-auth-shell {
+        @apply grid min-h-screen grid-cols-1;
+    }
+
+    .app-sidebar {
+        @apply flex flex-col gap-8 border-b border-slate-200 bg-white px-5 py-5 lg:border-r lg:border-b-0;
+    }
+
+    .app-brand {
+        @apply flex items-center gap-3;
+    }
+
+    .app-brand-mark {
+        @apply flex size-11 items-center justify-center rounded-md bg-emerald-700 text-sm font-semibold text-white;
+    }
+
+    .app-brand-title {
+        @apply block text-sm font-semibold text-slate-950;
+    }
+
+    .app-brand-subtitle {
+        @apply block text-xs text-slate-500;
+    }
+
+    .app-nav {
+        @apply flex flex-wrap gap-2 lg:flex-col;
+    }
+
+    .app-nav-link {
+        @apply rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-800;
+    }
+
+    .app-main {
+        @apply min-w-0 px-5 py-6 sm:px-8 lg:px-10;
+    }
+
+    .app-auth-main {
+        @apply min-w-0 px-5 py-6;
+    }
+
+    .app-topbar {
+        @apply mb-8 flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between;
+    }
+
+    .app-kicker {
+        @apply text-xs font-semibold uppercase tracking-wide text-emerald-700;
+    }
+
+    .app-page-title {
+        @apply mt-1 text-2xl font-semibold text-slate-950;
+    }
+
+    .app-userbar {
+        @apply flex flex-wrap items-center gap-3 text-sm font-medium text-slate-700;
+    }
+
+    .app-button {
+        @apply inline-flex min-h-10 items-center justify-center rounded-md px-4 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2;
+    }
+
+    .app-button-primary {
+        @apply bg-emerald-700 text-white hover:bg-emerald-800;
+    }
+
+    .app-button-muted {
+        @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+    }
+
+    .auth-panel {
+        @apply flex min-h-[calc(100vh-3rem)] items-center justify-center py-8;
+    }
+
+    .auth-card {
+        @apply w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm;
+    }
+
+    .auth-heading {
+        @apply mb-6;
+    }
+
+    .auth-title {
+        @apply mt-1 text-2xl font-semibold text-slate-950;
+    }
+
+    .auth-form {
+        @apply flex flex-col gap-4;
+    }
+
+    .form-field {
+        @apply flex flex-col gap-2 text-sm font-medium text-slate-700;
+    }
+
+    .form-field input {
+        @apply h-11 rounded-md border border-slate-300 bg-white px-3 text-base text-slate-950 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100;
+    }
+
+    .form-field select {
+        @apply h-11 rounded-md border border-slate-300 bg-white px-3 text-base text-slate-950 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100;
+    }
+
+    .form-field textarea {
+        @apply min-h-32 rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100;
+    }
+
+    .form-field input[type='file'] {
+        @apply h-auto py-2;
+    }
+
+    .form-help {
+        @apply text-xs font-medium text-slate-500;
+    }
+
+    .form-checkbox {
+        @apply flex items-center gap-2 text-sm font-medium text-slate-600;
+    }
+
+    .form-checkbox input {
+        @apply size-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600;
+    }
+
+    .form-error {
+        @apply text-sm font-medium text-red-700;
+    }
+
+    .dashboard-grid {
+        @apply grid grid-cols-1 gap-4 md:grid-cols-3;
+    }
+
+    .summary-card {
+        @apply rounded-lg border border-slate-200 bg-white p-5 shadow-sm;
+    }
+
+    .summary-card strong {
+        @apply mt-2 block text-3xl font-semibold text-slate-950;
+    }
+
+    .summary-label {
+        @apply text-sm font-medium text-slate-500;
+    }
+
+    .workspace-panel {
+        @apply mt-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm;
+    }
+
+    .workspace-actions {
+        @apply mt-5 flex flex-wrap gap-3;
+    }
+
+    .workspace-link {
+        @apply rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 transition hover:bg-amber-100;
+    }
+
+    .section-title {
+        @apply mt-1 text-xl font-semibold text-slate-950;
+    }
+
+    .section-copy {
+        @apply mt-4 max-w-2xl text-sm leading-6 text-slate-600;
+    }
+
+    .flash-message {
+        @apply mb-5 rounded-md border px-4 py-3 text-sm font-medium;
+    }
+
+    .flash-message-success {
+        @apply border-emerald-200 bg-emerald-50 text-emerald-900;
+    }
+
+    .flash-message-error {
+        @apply border-red-200 bg-red-50 text-red-900;
+    }
+
+    .admin-header {
+        @apply mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between;
+    }
+
+    .admin-filters {
+        @apply mb-5 flex flex-wrap gap-2;
+    }
+
+    .admin-filter-link {
+        @apply rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50;
+    }
+
+    .admin-filter-link.is-active {
+        @apply border-emerald-700 bg-emerald-50 text-emerald-800;
+    }
+
+    .admin-table-wrap {
+        @apply overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm;
+    }
+
+    .admin-table {
+        @apply min-w-full divide-y divide-slate-200 text-left text-sm;
+    }
+
+    .admin-table th {
+        @apply bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500;
+    }
+
+    .admin-table td {
+        @apply px-4 py-3 text-slate-700;
+    }
+
+    .admin-table tbody {
+        @apply divide-y divide-slate-100;
+    }
+
+    .admin-pagination {
+        @apply mt-5;
+    }
+
+    .admin-form {
+        @apply mt-5 flex flex-col gap-5;
+    }
+
+    .form-grid {
+        @apply grid grid-cols-1 gap-4 md:grid-cols-2;
+    }
+
+    .form-actions {
+        @apply flex flex-wrap gap-3;
+    }
+
+    .inline-actions {
+        @apply flex flex-wrap items-center gap-3 text-sm font-semibold;
+    }
+
+    .inline-actions a {
+        @apply text-emerald-800 hover:text-emerald-950;
+    }
+
+    .inline-actions button,
+    .table-button {
+        @apply text-sm font-semibold text-amber-800 transition hover:text-amber-950;
+    }
+
+    .vehicle-summary {
+        @apply relative inline-flex max-w-64 cursor-default items-center gap-1 rounded-md text-sm font-medium text-slate-700 outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2;
+    }
+
+    .vehicle-summary:hover,
+    .vehicle-summary:focus,
+    .vehicle-summary:focus-within {
+        @apply z-[9999];
+    }
+
+    .vehicle-summary-text {
+        @apply min-w-0 truncate;
+    }
+
+    .vehicle-summary-more {
+        @apply inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700;
+    }
+
+    .vehicle-summary-popover {
+        @apply hidden;
+    }
+
+    .vehicle-summary-floating-popover {
+        @apply fixed z-[2147483647] m-0 max-h-32 min-w-40 overflow-y-auto overscroll-contain rounded-md border border-slate-200 bg-white p-2 text-sm font-medium text-slate-700 shadow-xl outline-none;
+    }
+
+    .vehicle-summary-floating-popover span {
+        @apply block whitespace-nowrap rounded px-2 py-1;
+    }
+
+    .media-grid {
+        @apply mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3;
+    }
+
+    .media-item {
+        @apply overflow-hidden rounded-lg border border-slate-200 bg-slate-50;
+    }
+
+    .media-preview {
+        @apply block aspect-video w-full bg-slate-200 object-contain;
+    }
+
+    .media-document-link {
+        @apply flex aspect-video w-full items-center justify-center bg-slate-100 px-4 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 hover:text-emerald-950;
+    }
+
+    .media-meta {
+        @apply flex flex-col gap-1 border-t border-slate-200 bg-white p-3 text-sm;
+    }
+
+    .media-meta strong {
+        @apply break-words font-semibold text-slate-900;
+    }
+
+    .media-meta span {
+        @apply text-xs font-medium text-slate-500;
+    }
+
+    .detail-grid {
+        @apply mt-5 grid grid-cols-1 gap-4 md:grid-cols-2;
+    }
+
+    .detail-grid div {
+        @apply rounded-md border border-slate-200 bg-slate-50 p-4;
+    }
+
+    .detail-grid dt {
+        @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
+    }
+
+    .detail-grid dd {
+        @apply mt-1 text-sm font-medium text-slate-900;
+    }
+
+    .detail-grid a {
+        @apply text-emerald-800 hover:text-emerald-950;
+    }
+
+    .status-badge {
+        @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize;
+    }
+
+    .status-active {
+        @apply bg-emerald-100 text-emerald-900;
+    }
+
+    .status-inactive,
+    .status-retired {
+        @apply bg-slate-200 text-slate-700;
+    }
+
+    .status-suspended,
+    .status-maintenance,
+    .status-warning,
+    .status-pending {
+        @apply bg-amber-100 text-amber-900;
+    }
+
+    .status-under_review {
+        @apply bg-sky-100 text-sky-900;
+    }
+
+    .status-resolved {
+        @apply bg-emerald-100 text-emerald-900;
+    }
+
+    .status-completed {
+        @apply bg-emerald-100 text-emerald-900;
+    }
+
+    .status-failed {
+        @apply bg-red-100 text-red-900;
+    }
+
+    .muted-text {
+        @apply text-sm text-slate-500;
+    }
+}
