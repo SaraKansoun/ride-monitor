@@ -39,7 +39,7 @@
                             <td>{{ $incident->driver->user->name }}</td>
                             <td>{{ $incident->vehicle?->plate_number ?? 'Not selected' }}</td>
                             <td>{{ str_replace('_', ' ', $incident->type) }}</td>
-                            <td><span class="status-badge status-{{ $incident->status }}">{{ str_replace('_', ' ', $incident->status) }}</span></td>
+                            <td><x-status-badge :status="$incident->status" /></td>
                             <td>{{ $incident->media_count }}</td>
                             <td>{{ $incident->created_at->format('Y-m-d H:i') }}</td>
                             <td>
@@ -93,7 +93,7 @@
                             <td>{{ $review->incident->driver->user->name }}</td>
                             <td>{{ $review->incident->vehicle?->plate_number ?? 'Not selected' }}</td>
                             <td>{{ str_replace('_', ' ', $review->fault_decision) }}</td>
-                            <td><span class="status-badge @if ($review->is_active) status-active @else status-inactive @endif">{{ $review->is_active ? 'active' : 'inactive' }}</span></td>
+                            <td><x-status-badge :status="$review->is_active ? 'active' : 'inactive'" /></td>
                             <td>{{ $review->reviewer->name }}</td>
                             <td>{{ $review->reviewed_at->format('Y-m-d H:i') }}</td>
                             <td>

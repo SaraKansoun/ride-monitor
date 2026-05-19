@@ -54,12 +54,13 @@
             <div><dt>Driver</dt><dd>{{ $incident->driver->user->name }}</dd></div>
             <div><dt>Driver license</dt><dd>{{ $incident->driver->license_number }}</dd></div>
             <div><dt>Driver phone</dt><dd>{{ $incident->driver->phone ?? 'Not provided' }}</dd></div>
-            <div><dt>Driver status</dt><dd><span class="status-badge status-{{ $incident->driver->status }}">{{ $incident->driver->status }}</span></dd></div>
+            <div><dt>Driver status</dt><dd><x-status-badge :status="$incident->driver->status" /></dd></div>
             <div><dt>Vehicle plate</dt><dd>{{ $incident->vehicle?->plate_number ?? 'Not selected' }}</dd></div>
             <div><dt>Vehicle model</dt><dd>{{ $incident->vehicle?->model ?? 'Not selected' }}</dd></div>
             <div><dt>Vehicle year</dt><dd>{{ $incident->vehicle?->year ?? 'Not set' }}</dd></div>
             <div><dt>Type</dt><dd>{{ str_replace('_', ' ', $incident->type) }}</dd></div>
-            <div><dt>Status</dt><dd><span class="status-badge status-{{ $incident->status }}">{{ str_replace('_', ' ', $incident->status) }}</span></dd></div>
+            <div><dt>Severity</dt><dd><x-status-badge :status="$incident->severity" /></dd></div>
+            <div><dt>Status</dt><dd><x-status-badge :status="$incident->status" /></dd></div>
             <div><dt>Reported by</dt><dd>{{ $incident->reporter->name }}</dd></div>
             <div><dt>Reported at</dt><dd>{{ $incident->created_at->format('Y-m-d H:i') }}</dd></div>
             @if (! $incident->is_active)
@@ -87,7 +88,7 @@
 
         @if ($activeAiAnalysis)
             <dl class="detail-grid">
-                <div><dt>Status</dt><dd><span class="status-badge status-{{ $activeAiAnalysis->status }}">{{ $activeAiAnalysis->status }}</span></dd></div>
+                <div><dt>Status</dt><dd><x-status-badge :status="$activeAiAnalysis->status" /></dd></div>
                 <div><dt>Confidence score</dt><dd>{{ $activeAiAnalysis->confidence_score !== null ? number_format($activeAiAnalysis->confidence_score, 2) : 'Pending' }}</dd></div>
                 <div><dt>Detected events</dt><dd>{{ $activeAiAnalysis->detected_events ?? 'Pending' }}</dd></div>
                 <div><dt>Recommendation</dt><dd>{{ $activeAiAnalysis->recommendation ?? 'Manual review required before any decision.' }}</dd></div>
@@ -130,7 +131,7 @@
                 <div><dt>Fault decision</dt><dd>{{ str_replace('_', ' ', $activeReview->fault_decision) }}</dd></div>
                 <div><dt>Reviewed by</dt><dd>{{ $activeReview->reviewer->name }}</dd></div>
                 <div><dt>Reviewed at</dt><dd>{{ $activeReview->reviewed_at->format('Y-m-d H:i') }}</dd></div>
-                <div><dt>Review status</dt><dd><span class="status-badge status-active">active</span></dd></div>
+                <div><dt>Review status</dt><dd><x-status-badge status="active" /></dd></div>
             </dl>
             <p class="section-copy">{{ $activeReview->notes }}</p>
         @else
@@ -203,7 +204,7 @@
                         <div class="media-meta">
                             <strong>{{ $media->original_name }}</strong>
                             <span>{{ $media->mime_type }} - {{ round($media->size / 1024, 1) }} KB</span>
-                            <span><span class="status-badge status-{{ $media->is_active ? 'active' : 'inactive' }}">{{ $media->is_active ? 'active' : 'inactive' }}</span></span>
+                            <span><x-status-badge :status="$media->is_active ? 'active' : 'inactive'" /></span>
                             @if ($canManageMedia)
                                 <div class="inline-actions">
                                     @if ($media->is_active)

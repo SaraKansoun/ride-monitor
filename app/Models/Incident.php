@@ -30,6 +30,21 @@ class Incident extends Model
         self::TYPE_NEAR_MISS,
     ];
 
+    public const SEVERITY_LOW = 'low';
+
+    public const SEVERITY_MEDIUM = 'medium';
+
+    public const SEVERITY_HIGH = 'high';
+
+    public const SEVERITY_CRITICAL = 'critical';
+
+    public const SEVERITIES = [
+        self::SEVERITY_LOW,
+        self::SEVERITY_MEDIUM,
+        self::SEVERITY_HIGH,
+        self::SEVERITY_CRITICAL,
+    ];
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_UNDER_REVIEW = 'under_review';
@@ -52,6 +67,7 @@ class Incident extends Model
         'driver_id',
         'vehicle_id',
         'type',
+        'severity',
         'description',
         'status',
         'reported_by',
@@ -70,46 +86,83 @@ class Incident extends Model
         'is_active' => true,
     ];
 
+    public static function severityForType(string $type): string
+    {
+        return match ($type) {
+            self::TYPE_CRASH => self::SEVERITY_HIGH,
+            self::TYPE_COMPLAINT => self::SEVERITY_LOW,
+            self::TYPE_NEAR_MISS, self::TYPE_UNSAFE_DRIVING => self::SEVERITY_MEDIUM,
+            default => self::SEVERITY_MEDIUM,
+        };
+    }
+
+    /**
+     * @return BelongsTo<Driver, $this>
+     */
     public function driver(): BelongsTo
     {
         return $this->belongsTo(Driver::class);
     }
 
+    /**
+     * @return BelongsTo<Vehicle, $this>
+     */
     public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function reporter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reported_by');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function deactivator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'deactivated_by');
     }
 
+    /**
+     * @return HasMany<IncidentMedia, $this>
+     */
     public function media(): HasMany
     {
         return $this->hasMany(IncidentMedia::class);
     }
 
+    /**
+     * @return HasMany<AIAnalysis, $this>
+     */
     public function aiAnalyses(): HasMany
     {
         return $this->hasMany(AIAnalysis::class);
     }
 
+    /**
+     * @return HasOne<AIAnalysis, $this>
+     */
     public function activeAiAnalysis(): HasOne
     {
         return $this->hasOne(AIAnalysis::class)->where('is_active', true)->latestOfMany();
     }
 
+    /**
+     * @return HasMany<IncidentReview, $this>
+     */
     public function reviews(): HasMany
     {
         return $this->hasMany(IncidentReview::class);
     }
 
+    /**
+     * @return HasOne<IncidentReview, $this>
+     */
     public function activeReview(): HasOne
     {
         return $this->hasOne(IncidentReview::class)->where('is_active', true)->latestOfMany('reviewed_at');
@@ -136,6 +189,15 @@ class Incident extends Model
     public function isActive(): bool
     {
         return $this->is_active;
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Incident $incident): void {
+            if (blank($incident->severity)) {
+                $incident->severity = self::severityForType((string) $incident->type);
+            }
+        });
     }
 
     /**

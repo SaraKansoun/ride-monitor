@@ -25,11 +25,17 @@ class DriverVehicle extends Model
         'unassigned_at',
     ];
 
+    /**
+     * @return BelongsTo<Driver, $this>
+     */
     public function driver(): BelongsTo
     {
         return $this->belongsTo(Driver::class);
     }
 
+    /**
+     * @return BelongsTo<Vehicle, $this>
+     */
     public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class);

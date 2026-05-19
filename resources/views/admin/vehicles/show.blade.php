@@ -18,7 +18,7 @@
         <dl class="detail-grid">
             <div><dt>Model</dt><dd>{{ $vehicle->model }}</dd></div>
             <div><dt>Year</dt><dd>{{ $vehicle->year ?? 'Not set' }}</dd></div>
-            <div><dt>Status</dt><dd><span class="status-badge status-{{ $vehicle->status }}">{{ $vehicle->status }}</span></dd></div>
+            <div><dt>Status</dt><dd><x-status-badge :status="$vehicle->status" /></dd></div>
             <div><dt>Current driver</dt><dd>{{ $vehicle->currentAssignment?->driver?->user?->name ?? 'Unassigned' }}</dd></div>
         </dl>
     </section>

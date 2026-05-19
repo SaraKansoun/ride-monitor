@@ -45,11 +45,17 @@ class DriverScore extends Model
         'is_active' => true,
     ];
 
+    /**
+     * @return BelongsTo<Driver, $this>
+     */
     public function driver(): BelongsTo
     {
         return $this->belongsTo(Driver::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function deactivator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'deactivated_by');

@@ -22,6 +22,17 @@ return [
         'key' => env('RESEND_API_KEY'),
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-5.4-mini'),
+        'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
+        'timeout' => (int) env('OPENAI_TIMEOUT', 60),
+        'frame_count' => (int) env('OPENAI_FRAME_COUNT', 4),
+        'image_detail' => env('OPENAI_IMAGE_DETAIL', 'high'),
+        'ffmpeg_binary' => env('FFMPEG_BINARY', 'ffmpeg'),
+        'ffmpeg_timeout' => (int) env('FFMPEG_TIMEOUT', 60),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

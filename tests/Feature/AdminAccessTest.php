@@ -35,3 +35,24 @@ test('non admin users are forbidden from admin modules', function (string $role)
         ->get(route('admin.users.index'))
         ->assertForbidden();
 })->with(['monitor', 'driver']);
+
+test('driver performance navigation is only shown to drivers', function () {
+    $admin = createUserWithRole('admin');
+    $monitor = createUserWithRole('monitor');
+    $driver = createUserWithRole('driver');
+
+    $this->actingAs($admin)
+        ->get(route('dashboard'))
+        ->assertSuccessful()
+        ->assertDontSeeText('Driver Performance');
+
+    $this->actingAs($monitor)
+        ->get(route('dashboard'))
+        ->assertSuccessful()
+        ->assertDontSeeText('Driver Performance');
+
+    $this->actingAs($driver)
+        ->get(route('dashboard'))
+        ->assertSuccessful()
+        ->assertSeeText('Driver Performance');
+});

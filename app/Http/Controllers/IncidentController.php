@@ -10,43 +10,89 @@ use App\Models\DriverVehicle;
 use App\Models\Incident;
 use App\Models\IncidentMedia;
 use App\Models\User;
+use App\Services\CsvExportService;
 use App\Services\PermissionCatalog;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IncidentController extends Controller
 {
+    public function __construct(private CsvExportService $csvExportService) {}
+
     public function index(Request $request): View
     {
         Gate::authorize('viewAny', Incident::class);
 
         $status = $this->statusFilter($request);
+        $type = $this->typeFilter($request);
+        $severity = $this->severityFilter($request);
+        $workflowStatus = $this->workflowStatusFilter($request);
+        $reportedFrom = $this->dateFilter($request, 'reported_from');
+        $reportedTo = $this->dateFilter($request, 'reported_to');
+        $search = $this->searchTerm($request);
         $user = $request->user();
 
         abort_unless($user instanceof User, 403);
 
-        $incidents = Incident::query()
-            ->with(['driver.user', 'vehicle', 'reporter'])
-            ->withCount(['media' => fn ($query) => $query->where('is_active', true)])
-            ->when(! $user->can(PermissionCatalog::VIEW_INCIDENTS), function ($query) use ($user): void {
-                $driver = $user->driverProfile;
-
-                $query->where('driver_id', $driver instanceof Driver ? $driver->id : 0);
-            })
-            ->when($status === 'active', fn ($query) => $query->active())
-            ->when($status === Incident::STATUS_INACTIVE, fn ($query) => $query->inactive())
+        $incidents = $this->filteredIncidents($user, $status, $type, $severity, $workflowStatus, $reportedFrom, $reportedTo, $search)
             ->latest()
             ->paginate(15)
             ->withQueryString();
 
         return view('incidents.index', [
             'incidents' => $incidents,
+            'reportedFrom' => $reportedFrom,
+            'reportedTo' => $reportedTo,
+            'search' => $search,
+            'severity' => $severity,
+            'severities' => Incident::SEVERITIES,
             'status' => $status,
+            'type' => $type,
+            'types' => Incident::TYPES,
+            'workflowStatus' => $workflowStatus,
         ]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        Gate::authorize('viewAny', Incident::class);
+
+        $user = $request->user();
+
+        abort_unless($user instanceof User, 403);
+
+        $status = $this->statusFilter($request);
+        $type = $this->typeFilter($request);
+        $severity = $this->severityFilter($request);
+        $workflowStatus = $this->workflowStatusFilter($request);
+        $reportedFrom = $this->dateFilter($request, 'reported_from');
+        $reportedTo = $this->dateFilter($request, 'reported_to');
+        $search = $this->searchTerm($request);
+        $incidents = $this->filteredIncidents($user, $status, $type, $severity, $workflowStatus, $reportedFrom, $reportedTo, $search)
+            ->latest()
+            ->get();
+
+        return $this->csvExportService->download(
+            'incidents.csv',
+            ['ID', 'Severity', 'Type', 'Status', 'Description', 'Driver', 'Vehicle', 'Media Count', 'Reported At'],
+            $this->csvExportService->rows($incidents, fn (Incident $incident): array => [
+                $incident->id,
+                $incident->severity,
+                $incident->type,
+                $incident->status,
+                $incident->description,
+                data_get($incident, 'driver.user.name'),
+                data_get($incident, 'vehicle.plate_number', 'Not selected'),
+                $incident->media_count,
+                $incident->created_at?->format('Y-m-d H:i'),
+            ])
+        );
     }
 
     public function create(Request $request): View
@@ -61,11 +107,9 @@ class IncidentController extends Controller
             ->with('currentAssignments.vehicle')
             ->firstOrFail();
 
-        abort_unless($driver instanceof Driver, 404);
-
         return view('incidents.create', [
             'assignedVehicles' => $driver->currentAssignments
-                ->map(fn ($assignment) => $assignment instanceof DriverVehicle ? $assignment->vehicle : null)
+                ->map(fn (DriverVehicle $assignment) => $assignment->vehicle)
                 ->filter()
                 ->values(),
             'incident' => new Incident(['status' => Incident::STATUS_PENDING]),
@@ -81,10 +125,11 @@ class IncidentController extends Controller
         abort_unless($user instanceof User && $driver instanceof Driver, 403);
 
         $aiAnalysis = null;
+        $hasVisualMedia = false;
         $mediaFiles = $request->file('media', []);
         $mediaFiles = is_array($mediaFiles) ? $mediaFiles : [];
 
-        $incident = DB::transaction(function () use ($driver, $mediaFiles, $request, &$aiAnalysis, $user): Incident {
+        $incident = DB::transaction(function () use ($driver, &$hasVisualMedia, $mediaFiles, $request, &$aiAnalysis, $user): Incident {
             $incident = Incident::query()->create([
                 'driver_id' => $driver->id,
                 'vehicle_id' => $request->validated('vehicle_id'),
@@ -103,11 +148,14 @@ class IncidentController extends Controller
                 }
 
                 $mimeType = $file->getMimeType() ?: $file->getClientMimeType() ?: 'application/octet-stream';
+                $fileType = $this->fileType($mimeType);
+                $hasVisualMedia = $hasVisualMedia
+                    || in_array($fileType, [IncidentMedia::TYPE_IMAGE, IncidentMedia::TYPE_VIDEO], true);
 
                 $incident->media()->create([
                     'file_path' => $path,
                     'original_name' => $file->getClientOriginalName(),
-                    'file_type' => $this->fileType($mimeType),
+                    'file_type' => $fileType,
                     'mime_type' => $mimeType,
                     'size' => $file->getSize(),
                     'uploaded_by' => $user->id,
@@ -115,7 +163,7 @@ class IncidentController extends Controller
                 ]);
             }
 
-            if ($mediaFiles !== []) {
+            if ($hasVisualMedia) {
                 $aiAnalysis = $incident->aiAnalyses()->create([
                     'status' => AIAnalysis::STATUS_PENDING,
                     'is_active' => true,
@@ -199,6 +247,39 @@ class IncidentController extends Controller
         return in_array($status, ['active', Incident::STATUS_INACTIVE, 'all'], true) ? $status : 'active';
     }
 
+    private function typeFilter(Request $request): string
+    {
+        $type = $request->string('type', 'all')->toString();
+
+        return in_array($type, [...Incident::TYPES, 'all'], true) ? $type : 'all';
+    }
+
+    private function severityFilter(Request $request): string
+    {
+        $severity = $request->string('severity', 'all')->toString();
+
+        return in_array($severity, [...Incident::SEVERITIES, 'all'], true) ? $severity : 'all';
+    }
+
+    private function workflowStatusFilter(Request $request): string
+    {
+        $workflowStatus = $request->string('incident_status', 'all')->toString();
+
+        return in_array($workflowStatus, [...Incident::STATUSES, 'all'], true) ? $workflowStatus : 'all';
+    }
+
+    private function dateFilter(Request $request, string $key): ?string
+    {
+        $date = $request->string($key)->toString();
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1 ? $date : null;
+    }
+
+    private function searchTerm(Request $request): string
+    {
+        return trim($request->string('q')->toString());
+    }
+
     private function mediaStatusFilter(Request $request): string
     {
         $status = $request->string('media_status', 'active')->toString();
@@ -217,5 +298,51 @@ class IncidentController extends Controller
         }
 
         return IncidentMedia::TYPE_DOCUMENT;
+    }
+
+    /**
+     * @return Builder<Incident>
+     */
+    private function filteredIncidents(
+        User $user,
+        string $status,
+        string $type,
+        string $severity,
+        string $workflowStatus,
+        ?string $reportedFrom,
+        ?string $reportedTo,
+        string $search
+    ): Builder {
+        return Incident::query()
+            ->with(['driver.user', 'vehicle', 'reporter'])
+            ->withCount(['media' => fn (Builder $query) => $query->where('is_active', true)])
+            ->when(! $user->can(PermissionCatalog::VIEW_INCIDENTS), function (Builder $query) use ($user): void {
+                $driver = $user->driverProfile;
+
+                $query->where('driver_id', $driver instanceof Driver ? $driver->id : 0);
+            })
+            ->when($status === 'active', fn (Builder $query) => $query->active())
+            ->when($status === Incident::STATUS_INACTIVE, fn (Builder $query) => $query->inactive())
+            ->when($type !== 'all', fn (Builder $query) => $query->where('type', $type))
+            ->when($severity !== 'all', fn (Builder $query) => $query->where('severity', $severity))
+            ->when($workflowStatus !== 'all', fn (Builder $query) => $query->where('status', $workflowStatus))
+            ->when($reportedFrom !== null, fn (Builder $query) => $query->whereDate('created_at', '>=', $reportedFrom))
+            ->when($reportedTo !== null, fn (Builder $query) => $query->whereDate('created_at', '<=', $reportedTo))
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $query) use ($search): void {
+                    $query
+                        ->where('description', 'like', "%{$search}%")
+                        ->orWhereHas('driver.user', function (Builder $query) use ($search): void {
+                            $query
+                                ->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('vehicle', function (Builder $query) use ($search): void {
+                            $query
+                                ->where('plate_number', 'like', "%{$search}%")
+                                ->orWhere('model', 'like', "%{$search}%");
+                        });
+                });
+            });
     }
 }

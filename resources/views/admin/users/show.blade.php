@@ -18,7 +18,7 @@
         <dl class="detail-grid">
             <div><dt>Email</dt><dd>{{ $user->email }}</dd></div>
             <div><dt>Role</dt><dd>{{ $user->getRoleNames()->implode(', ') }}</dd></div>
-            <div><dt>Status</dt><dd><span class="status-badge status-{{ $user->status }}">{{ $user->status }}</span></dd></div>
+            <div><dt>Status</dt><dd><x-status-badge :status="$user->status" /></dd></div>
             <div>
                 <dt>Driver profile</dt>
                 <dd>

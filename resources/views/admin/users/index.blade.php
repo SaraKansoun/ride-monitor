@@ -15,9 +15,31 @@
 
     <nav class="admin-filters" aria-label="User status filters">
         @foreach (['active' => 'Active', 'inactive' => 'Inactive', 'all' => 'All'] as $value => $label)
-            <a class="admin-filter-link @if ($status === $value) is-active @endif" href="{{ route('admin.users.index', ['status' => $value]) }}">{{ $label }}</a>
+            <a class="admin-filter-link @if ($status === $value) is-active @endif" href="{{ route('admin.users.index', array_merge(request()->except('page'), ['status' => $value])) }}">{{ $label }}</a>
         @endforeach
     </nav>
+
+    <form class="filter-panel" method="GET" action="{{ route('admin.users.index') }}" data-auto-filter>
+        <input type="hidden" name="status" value="{{ $status }}">
+
+        <label class="filter-field">
+            <span>Search users</span>
+            <input type="search" name="q" value="{{ $search }}" placeholder="Name or email">
+        </label>
+
+        <label class="filter-field">
+            <span>Role</span>
+            <select name="role">
+                @foreach ($roles as $roleOption)
+                    <option value="{{ $roleOption }}" @selected($role === $roleOption)>{{ str($roleOption)->headline() }}</option>
+                @endforeach
+            </select>
+        </label>
+
+        <div class="filter-actions">
+            <a class="app-button app-button-muted" href="{{ route('admin.users.index') }}">Reset</a>
+        </div>
+    </form>
 
     <section class="admin-table-wrap">
         <table class="admin-table">
@@ -37,7 +59,7 @@
                         <td>{{ $user->name }}</td>
                         <td>{{ $user->email }}</td>
                         <td>{{ $user->getRoleNames()->implode(', ') }}</td>
-                        <td><span class="status-badge status-{{ $user->status }}">{{ $user->status }}</span></td>
+                        <td><x-status-badge :status="$user->status" /></td>
                         <td>
                             @if ($user->hasRole('driver'))
                                 @if ($user->driverProfile)

@@ -8,16 +8,41 @@
             <p class="app-kicker">Admin</p>
             <h2 class="section-title">Drivers</h2>
         </div>
-        @can('create', \App\Models\Driver::class)
-            <a class="app-button app-button-primary" href="{{ route('admin.drivers.create') }}">Create driver</a>
-        @endcan
+        <div class="page-actions">
+            <a class="app-button app-button-muted" href="{{ route('admin.drivers.export', request()->query()) }}">Export CSV</a>
+            @can('create', \App\Models\Driver::class)
+                <a class="app-button app-button-primary" href="{{ route('admin.drivers.create') }}">Create driver</a>
+            @endcan
+        </div>
     </section>
 
     <nav class="admin-filters" aria-label="Driver status filters">
         @foreach (['active' => 'Active', 'inactive' => 'Inactive', 'all' => 'All'] as $value => $label)
-            <a class="admin-filter-link @if ($status === $value) is-active @endif" href="{{ route('admin.drivers.index', ['status' => $value]) }}">{{ $label }}</a>
+            <a class="admin-filter-link @if ($status === $value) is-active @endif" href="{{ route('admin.drivers.index', array_merge(request()->except('page'), ['status' => $value])) }}">{{ $label }}</a>
         @endforeach
     </nav>
+
+    <form class="filter-panel" method="GET" action="{{ route('admin.drivers.index') }}" data-auto-filter>
+        <input type="hidden" name="status" value="{{ $status }}">
+
+        <label class="filter-field">
+            <span>Search drivers</span>
+            <input type="search" name="q" value="{{ $search }}" placeholder="Name, email, license, phone">
+        </label>
+
+        <label class="filter-field">
+            <span>Profile</span>
+            <select name="profile">
+                @foreach (['all' => 'All profiles', 'complete' => 'Complete profiles', 'missing' => 'Missing profiles'] as $value => $label)
+                    <option value="{{ $value }}" @selected($profile === $value)>{{ $label }}</option>
+                @endforeach
+            </select>
+        </label>
+
+        <div class="filter-actions">
+            <a class="app-button app-button-muted" href="{{ route('admin.drivers.index') }}">Reset</a>
+        </div>
+    </form>
 
     <section class="admin-table-wrap">
         <table class="admin-table">
@@ -48,7 +73,7 @@
                         <td>{{ $profile?->license_number ?? 'Missing profile' }}</td>
                         <td>
                             @if ($profile)
-                                <span class="status-badge status-{{ $profile->status }}">{{ $profile->status }}</span>
+                                <x-status-badge :status="$profile->status" />
                             @else
                                 <span class="status-badge status-warning">Missing profile</span>
                             @endif

@@ -2,8 +2,10 @@
 
 use App\Models\Driver;
 use App\Models\Incident;
+use App\Models\IncidentReview;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\DriverScoreService;
 use Spatie\Permission\PermissionRegistrar;
 
 beforeEach(function (): void {
@@ -64,6 +66,11 @@ test('admin sees admin dashboard counts excluding inactive records by default', 
     $this->actingAs($admin)
         ->get(route('dashboard.admin'))
         ->assertSuccessful()
+        ->assertSeeText('Fleet health')
+        ->assertSeeText('Latest active incidents')
+        ->assertSeeText('Quick actions')
+        ->assertSeeText('Incidents Over Time')
+        ->assertSeeText(now()->format('M j').': 2')
         ->assertSeeTextInOrder(['Total active users', '3'])
         ->assertSeeTextInOrder(['Total inactive users', '1'])
         ->assertSeeTextInOrder(['Total active drivers', '1'])
@@ -110,6 +117,11 @@ test('monitor sees incident cards recent incidents and risky active drivers', fu
         ->get(route('dashboard'))
         ->assertSuccessful()
         ->assertSeeText('Monitor workspace')
+        ->assertSeeText('Review workload')
+        ->assertSeeText('Pending reviews queue')
+        ->assertSeeText('Lowest score watchlist')
+        ->assertSeeText('Incidents Over Time')
+        ->assertSeeText(now()->format('M j').': 3')
         ->assertSeeTextInOrder(['Pending incidents', '1'])
         ->assertSeeTextInOrder(['Incidents under review', '1'])
         ->assertSeeTextInOrder(['Resolved incidents', '1'])
@@ -161,6 +173,57 @@ test('driver sees only own dashboard data and latest active incident status', fu
     $driver = Driver::factory()->create(['user_id' => $driverUser->id]);
     $otherDriver = createDashboardDriverProfile('Other Dashboard Driver');
     $driver->score()->firstOrFail()->update(['score' => 87]);
+    $resolvedTrendIncident = Incident::factory()->create([
+        'driver_id' => $driver->id,
+        'reported_by' => $driverUser->id,
+        'description' => 'Resolved trend crash incident',
+        'status' => Incident::STATUS_RESOLVED,
+        'type' => Incident::TYPE_CRASH,
+        'created_at' => now()->subDays(6),
+        'updated_at' => now()->subDays(6),
+    ]);
+    IncidentReview::factory()->create([
+        'fault_decision' => IncidentReview::FAULT_DRIVER,
+        'incident_id' => $resolvedTrendIncident->id,
+        'reviewed_at' => now()->subDays(5),
+    ]);
+    $unsafeTrendIncident = Incident::factory()->create([
+        'driver_id' => $driver->id,
+        'reported_by' => $driverUser->id,
+        'description' => 'Resolved trend unsafe incident',
+        'status' => Incident::STATUS_RESOLVED,
+        'type' => Incident::TYPE_UNSAFE_DRIVING,
+        'created_at' => now()->subDays(5),
+        'updated_at' => now()->subDays(5),
+    ]);
+    IncidentReview::factory()->create([
+        'fault_decision' => IncidentReview::FAULT_UNCLEAR,
+        'incident_id' => $unsafeTrendIncident->id,
+        'reviewed_at' => now()->subDays(4),
+    ]);
+    $inactiveReviewIncident = Incident::factory()->create([
+        'driver_id' => $driver->id,
+        'reported_by' => $driverUser->id,
+        'description' => 'Inactive review trend incident',
+        'status' => Incident::STATUS_RESOLVED,
+        'type' => Incident::TYPE_COMPLAINT,
+    ]);
+    IncidentReview::factory()->inactive()->create([
+        'incident_id' => $inactiveReviewIncident->id,
+        'reviewed_at' => now()->subDays(3),
+    ]);
+    $inactiveIncident = Incident::factory()->inactive()->create([
+        'driver_id' => $driver->id,
+        'reported_by' => $driverUser->id,
+        'description' => 'Inactive incident trend review',
+        'type' => Incident::TYPE_CRASH,
+    ]);
+    IncidentReview::factory()->create([
+        'fault_decision' => IncidentReview::FAULT_DRIVER,
+        'incident_id' => $inactiveIncident->id,
+        'reviewed_at' => now()->subDays(2),
+    ]);
+    app(DriverScoreService::class)->recalculateForDriver($driver);
 
     Incident::factory()->create([
         'driver_id' => $driver->id,
@@ -195,10 +258,18 @@ test('driver sees only own dashboard data and latest active incident status', fu
         ->get(route('dashboard'))
         ->assertSuccessful()
         ->assertSeeText('Driver workspace')
-        ->assertSeeTextInOrder(['My active incidents', '2'])
-        ->assertSeeTextInOrder(['My resolved incidents', '1'])
+        ->assertSeeText('Safety score guide')
+        ->assertSeeText('Driver Safety Score Trend')
+        ->assertSeeText('Start: 100')
+        ->assertSeeText(now()->subDays(5)->format('M j').': 80')
+        ->assertSeeText(now()->subDays(4)->format('M j').': 70')
+        ->assertDontSeeText(now()->subDays(3)->format('M j').': 65')
+        ->assertSeeText('My latest incidents')
+        ->assertSeeText('Quick actions')
+        ->assertSeeTextInOrder(['My active incidents', '5'])
+        ->assertSeeTextInOrder(['My resolved incidents', '4'])
         ->assertSeeTextInOrder(['My pending incidents', '1'])
-        ->assertSeeTextInOrder(['My current safety score', '87'])
+        ->assertSeeTextInOrder(['My current safety score', '70'])
         ->assertSeeText('Latest active resolved own incident')
         ->assertDontSeeText('Newest inactive own incident')
         ->assertDontSeeText('Other driver dashboard incident');

@@ -40,11 +40,17 @@ class User extends Authenticatable
         'is_active' => true,
     ];
 
+    /**
+     * @return HasOne<Driver, $this>
+     */
     public function driverProfile(): HasOne
     {
         return $this->hasOne(Driver::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function deactivator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'deactivated_by');

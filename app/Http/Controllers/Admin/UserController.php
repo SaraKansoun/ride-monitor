@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\Driver;
 use App\Models\User;
 use App\Services\DeactivationService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,16 +24,18 @@ class UserController extends Controller
         Gate::authorize('viewAny', User::class);
 
         $status = $this->statusFilter($request);
+        $role = $this->roleFilter($request);
+        $search = $this->searchTerm($request);
 
-        $users = User::query()
-            ->with(['roles', 'driverProfile.currentAssignment.vehicle'])
-            ->when($status === User::STATUS_ACTIVE, fn ($query) => $query->active())
-            ->when($status === User::STATUS_INACTIVE, fn ($query) => $query->inactive())
+        $users = $this->filteredUsers($status, $role, $search)
             ->latest()
             ->paginate(15)
             ->withQueryString();
 
         return view('admin.users.index', [
+            'role' => $role,
+            'roles' => ['all', 'admin', 'monitor', 'driver'],
+            'search' => $search,
             'status' => $status,
             'users' => $users,
         ]);
@@ -187,6 +190,37 @@ class UserController extends Controller
         $status = $request->string('status', User::STATUS_ACTIVE)->toString();
 
         return in_array($status, [...User::STATUSES, 'all'], true) ? $status : User::STATUS_ACTIVE;
+    }
+
+    private function roleFilter(Request $request): string
+    {
+        $role = $request->string('role', 'all')->toString();
+
+        return in_array($role, ['all', 'admin', 'monitor', 'driver'], true) ? $role : 'all';
+    }
+
+    private function searchTerm(Request $request): string
+    {
+        return trim($request->string('q')->toString());
+    }
+
+    /**
+     * @return Builder<User>
+     */
+    private function filteredUsers(string $status, string $role, string $search): Builder
+    {
+        return User::query()
+            ->with(['roles', 'driverProfile.currentAssignment.vehicle'])
+            ->when($status === User::STATUS_ACTIVE, fn (Builder $query) => $query->active())
+            ->when($status === User::STATUS_INACTIVE, fn (Builder $query) => $query->inactive())
+            ->when($role !== 'all', fn (Builder $query) => $query->role($role))
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $query) use ($search): void {
+                    $query
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            });
     }
 
     private function driverDeactivationError(mixed $driver): ?string

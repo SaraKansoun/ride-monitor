@@ -51,21 +51,33 @@ class Vehicle extends Model
         'is_active' => true,
     ];
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function deactivator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'deactivated_by');
     }
 
+    /**
+     * @return HasMany<DriverVehicle, $this>
+     */
     public function assignments(): HasMany
     {
         return $this->hasMany(DriverVehicle::class);
     }
 
+    /**
+     * @return HasOne<DriverVehicle, $this>
+     */
     public function currentAssignment(): HasOne
     {
         return $this->hasOne(DriverVehicle::class)->whereNull('unassigned_at')->latestOfMany('assigned_at');
     }
 
+    /**
+     * @return BelongsToMany<Driver, $this>
+     */
     public function drivers(): BelongsToMany
     {
         return $this->belongsToMany(Driver::class, 'driver_vehicle')
@@ -73,6 +85,9 @@ class Vehicle extends Model
             ->withTimestamps();
     }
 
+    /**
+     * @return HasMany<Incident, $this>
+     */
     public function incidents(): HasMany
     {
         return $this->hasMany(Incident::class);

@@ -37,7 +37,7 @@
                         <td>{{ str($analysis->incident->description)->limit(80) }}</td>
                         <td>{{ $analysis->incident->driver->user->name }}</td>
                         <td>{{ $analysis->incident->vehicle?->plate_number ?? 'Not selected' }}</td>
-                        <td><span class="status-badge status-{{ $analysis->status }}">{{ $analysis->status }}</span></td>
+                        <td><x-status-badge :status="$analysis->status" /></td>
                         <td>{{ $analysis->confidence_score !== null ? number_format($analysis->confidence_score, 2) : 'Pending' }}</td>
                         <td>{{ $analysis->summary ? str($analysis->summary)->limit(80) : 'AI observations are not ready yet.' }}</td>
                         <td>

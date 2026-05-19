@@ -51,31 +51,49 @@ class Driver extends Model
         'is_active' => true,
     ];
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function deactivator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'deactivated_by');
     }
 
+    /**
+     * @return HasMany<DriverVehicle, $this>
+     */
     public function assignments(): HasMany
     {
         return $this->hasMany(DriverVehicle::class);
     }
 
+    /**
+     * @return HasOne<DriverVehicle, $this>
+     */
     public function currentAssignment(): HasOne
     {
         return $this->hasOne(DriverVehicle::class)->whereNull('unassigned_at')->latestOfMany('assigned_at');
     }
 
+    /**
+     * @return HasMany<DriverVehicle, $this>
+     */
     public function currentAssignments(): HasMany
     {
         return $this->hasMany(DriverVehicle::class)->whereNull('unassigned_at')->latest('assigned_at');
     }
 
+    /**
+     * @return BelongsToMany<Vehicle, $this>
+     */
     public function vehicles(): BelongsToMany
     {
         return $this->belongsToMany(Vehicle::class, 'driver_vehicle')
@@ -83,11 +101,17 @@ class Driver extends Model
             ->withTimestamps();
     }
 
+    /**
+     * @return HasMany<Incident, $this>
+     */
     public function incidents(): HasMany
     {
         return $this->hasMany(Incident::class);
     }
 
+    /**
+     * @return HasMany<Incident, $this>
+     */
     public function unresolvedActiveIncidents(): HasMany
     {
         return $this->hasMany(Incident::class)
@@ -95,6 +119,9 @@ class Driver extends Model
             ->whereIn('status', [Incident::STATUS_PENDING, Incident::STATUS_UNDER_REVIEW]);
     }
 
+    /**
+     * @return HasOne<DriverScore, $this>
+     */
     public function score(): HasOne
     {
         return $this->hasOne(DriverScore::class);

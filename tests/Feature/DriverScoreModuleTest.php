@@ -2,8 +2,10 @@
 
 use App\Models\Driver;
 use App\Models\DriverScore;
+use App\Models\DriverVehicle;
 use App\Models\Incident;
 use App\Models\IncidentReview;
+use App\Models\Vehicle;
 use App\Services\DriverScoreService;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -135,6 +137,46 @@ test('score never drops below zero or above one hundred', function () {
         ->and($score->total_incidents)->toBe(6);
 });
 
+test('driver score trend uses active final reviews and clamps the score', function () {
+    $monitor = createUserWithRole('monitor');
+    $driver = Driver::factory()->create();
+
+    foreach (range(1, 6) as $number) {
+        $incident = Incident::factory()->create([
+            'driver_id' => $driver->id,
+            'reported_by' => $monitor->id,
+            'type' => Incident::TYPE_CRASH,
+            'status' => Incident::STATUS_RESOLVED,
+            'description' => "Trend crash review {$number}",
+        ]);
+
+        IncidentReview::factory()->create([
+            'incident_id' => $incident->id,
+            'reviewed_by' => $monitor->id,
+            'fault_decision' => IncidentReview::FAULT_DRIVER,
+            'is_active' => true,
+            'reviewed_at' => now()->subDays(10 - $number),
+        ]);
+    }
+
+    $inactiveReviewIncident = Incident::factory()->create([
+        'driver_id' => $driver->id,
+        'reported_by' => $monitor->id,
+        'type' => Incident::TYPE_COMPLAINT,
+        'status' => Incident::STATUS_RESOLVED,
+    ]);
+    IncidentReview::factory()->inactive()->create([
+        'incident_id' => $inactiveReviewIncident->id,
+        'reviewed_at' => now(),
+    ]);
+
+    $trend = app(DriverScoreService::class)->scoreTrendForDriver($driver);
+
+    expect($trend)->toHaveCount(7)
+        ->and($trend[0])->toBe(['label' => 'Start', 'value' => 100])
+        ->and($trend[6]['value'])->toBe(DriverScore::MIN_SCORE);
+});
+
 test('admin and monitor can view safety score list', function () {
     $admin = createUserWithRole('admin');
     $monitor = createUserWithRole('monitor');
@@ -169,6 +211,114 @@ test('driver can view only their own performance page', function () {
     $this->actingAs($driverUser)
         ->get(route('safety-scores.index'))
         ->assertForbidden();
+});
+
+test('driver performance page shows detailed report sections for the authenticated driver', function () {
+    $driverUser = createUserWithRole('driver', ['name' => 'Primary Driver']);
+    $otherDriverUser = createUserWithRole('driver', ['name' => 'Other Driver']);
+    $driver = Driver::factory()->create([
+        'license_number' => 'DRV-PRIMARY',
+        'user_id' => $driverUser->id,
+    ]);
+    $otherDriver = Driver::factory()->create(['user_id' => $otherDriverUser->id]);
+    $vehicle = Vehicle::factory()->create([
+        'model' => 'Toyota Safety Car',
+        'plate_number' => 'SAFE-101',
+    ]);
+    DriverVehicle::factory()->create([
+        'driver_id' => $driver->id,
+        'vehicle_id' => $vehicle->id,
+    ]);
+    $resolvedIncident = Incident::factory()->create([
+        'created_at' => now()->subDays(2),
+        'description' => 'Own resolved crash report',
+        'driver_id' => $driver->id,
+        'reported_by' => $driverUser->id,
+        'severity' => Incident::SEVERITY_HIGH,
+        'status' => Incident::STATUS_RESOLVED,
+        'type' => Incident::TYPE_CRASH,
+        'vehicle_id' => $vehicle->id,
+    ]);
+    IncidentReview::factory()->create([
+        'fault_decision' => IncidentReview::FAULT_DRIVER,
+        'incident_id' => $resolvedIncident->id,
+        'reviewed_at' => now()->subDay(),
+    ]);
+    Incident::factory()->create([
+        'description' => 'Own pending near miss',
+        'driver_id' => $driver->id,
+        'reported_by' => $driverUser->id,
+        'status' => Incident::STATUS_PENDING,
+        'type' => Incident::TYPE_NEAR_MISS,
+    ]);
+    $inactiveReviewIncident = Incident::factory()->create([
+        'created_at' => now()->subDays(5),
+        'description' => 'Inactive review should stay hidden',
+        'driver_id' => $driver->id,
+        'reported_by' => $driverUser->id,
+        'status' => Incident::STATUS_RESOLVED,
+    ]);
+    IncidentReview::factory()->inactive()->create([
+        'incident_id' => $inactiveReviewIncident->id,
+    ]);
+    $inactiveIncident = Incident::factory()->inactive()->create([
+        'description' => 'Inactive incident should stay hidden',
+        'driver_id' => $driver->id,
+        'reported_by' => $driverUser->id,
+    ]);
+    IncidentReview::factory()->create([
+        'incident_id' => $inactiveIncident->id,
+    ]);
+    $otherIncident = Incident::factory()->create([
+        'description' => 'Other private incident',
+        'driver_id' => $otherDriver->id,
+        'reported_by' => $otherDriverUser->id,
+        'status' => Incident::STATUS_RESOLVED,
+    ]);
+    IncidentReview::factory()->create([
+        'incident_id' => $otherIncident->id,
+    ]);
+
+    app(DriverScoreService::class)->recalculateForDriver($driver);
+
+    $this->actingAs($driverUser)
+        ->get(route('driver-performance.show'))
+        ->assertSuccessful()
+        ->assertSeeText('Your safety performance report')
+        ->assertSeeText('Score impact')
+        ->assertSeeText('Incident mix')
+        ->assertSeeText('Assigned vehicles')
+        ->assertSeeText('Recent final reviews')
+        ->assertSeeText('Toyota Safety Car')
+        ->assertSeeText('SAFE-101')
+        ->assertSeeText('Own resolved crash report')
+        ->assertSeeText('Own pending near miss')
+        ->assertDontSeeText('Other Driver')
+        ->assertDontSeeText('Other private incident')
+        ->assertDontSeeText('Inactive incident should stay hidden');
+});
+
+test('driver performance score band changes with current score', function (int $score, string $band) {
+    $driverUser = createUserWithRole('driver');
+    $driver = Driver::factory()->create(['user_id' => $driverUser->id]);
+    $driver->score()->firstOrFail()->update(['score' => $score]);
+
+    $this->actingAs($driverUser)
+        ->get(route('driver-performance.show'))
+        ->assertSuccessful()
+        ->assertSeeText($band);
+})->with([
+    'strong score' => [92, 'Strong performance'],
+    'attention score' => [65, 'Needs attention'],
+    'high risk score' => [35, 'High risk'],
+]);
+
+test('driver performance page keeps no profile behavior unchanged', function () {
+    $driverUser = createUserWithRole('driver');
+
+    $this->actingAs($driverUser)
+        ->get(route('driver-performance.show'))
+        ->assertNotFound();
 });
 
 test('inactive drivers are hidden from default active score list', function () {

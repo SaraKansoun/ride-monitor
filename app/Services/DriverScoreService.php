@@ -6,6 +6,7 @@ use App\Models\Driver;
 use App\Models\DriverScore;
 use App\Models\Incident;
 use App\Models\IncidentReview;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\DB;
@@ -75,6 +76,45 @@ class DriverScoreService
 
             return $score->refresh();
         });
+    }
+
+    /**
+     * @return list<array{label: string, value: int}>
+     */
+    public function scoreTrendForDriver(Driver $driver): array
+    {
+        /** @var EloquentCollection<int, IncidentReview> $reviews */
+        $reviews = IncidentReview::query()
+            ->active()
+            ->whereHas('incident', fn (Builder $query): Builder => $query
+                ->where('driver_id', $driver->id)
+                ->where('is_active', true)
+                ->where('status', Incident::STATUS_RESOLVED))
+            ->with('incident')
+            ->orderBy('reviewed_at')
+            ->orderBy('id')
+            ->get();
+
+        $score = DriverScore::DEFAULT_SCORE;
+        $points = [[
+            'label' => 'Start',
+            'value' => $score,
+        ]];
+
+        foreach ($reviews as $review) {
+            $score = max(
+                DriverScore::MIN_SCORE,
+                min(DriverScore::MAX_SCORE, $score - $this->penaltyForReview($review)),
+            );
+            $reviewedAt = $review->getAttribute('reviewed_at');
+
+            $points[] = [
+                'label' => $reviewedAt instanceof CarbonInterface ? $reviewedAt->format('M j') : 'Reviewed',
+                'value' => $score,
+            ];
+        }
+
+        return $points;
     }
 
     private function penaltyForReview(IncidentReview $review): int

@@ -34,6 +34,7 @@ Route::middleware('auth')->group(function (): void {
         Route::get('dashboard/driver', [DashboardController::class, 'driver'])->middleware('role:driver')->name('dashboard.driver');
         Route::get('driver-performance', [DriverScoreController::class, 'performance'])->middleware('permission:view own safety score')->name('driver-performance.show');
 
+        Route::get('incidents/export', [IncidentController::class, 'export'])->name('incidents.export');
         Route::resource('incidents', IncidentController::class)->only(['index', 'create', 'store', 'show']);
         Route::patch('incidents/{incident}/deactivate', [IncidentController::class, 'deactivate'])->name('incidents.deactivate');
         Route::patch('incidents/{incident}/reactivate', [IncidentController::class, 'reactivate'])->name('incidents.reactivate');
@@ -43,6 +44,7 @@ Route::middleware('auth')->group(function (): void {
         Route::patch('ai-analyses/{aiAnalysis}/deactivate', [AIAnalysisController::class, 'deactivate'])->name('ai-analyses.deactivate');
         Route::patch('ai-analyses/{aiAnalysis}/reactivate', [AIAnalysisController::class, 'reactivate'])->name('ai-analyses.reactivate');
 
+        Route::get('safety-scores/export', [DriverScoreController::class, 'export'])->name('safety-scores.export');
         Route::get('safety-scores', [DriverScoreController::class, 'index'])->name('safety-scores.index');
         Route::patch('driver-scores/{driverScore}/deactivate', [DriverScoreController::class, 'deactivate'])->name('driver-scores.deactivate');
         Route::patch('driver-scores/{driverScore}/reactivate', [DriverScoreController::class, 'reactivate'])->name('driver-scores.reactivate');
@@ -63,12 +65,14 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('users/{user}/deactivate', [AdminUserController::class, 'deactivate'])->name('users.deactivate');
             Route::patch('users/{user}/reactivate', [AdminUserController::class, 'reactivate'])->name('users.reactivate');
 
+            Route::get('drivers/export', [AdminDriverController::class, 'export'])->name('drivers.export');
             Route::get('drivers/users/{user}/complete', [AdminDriverController::class, 'createForUser'])->name('drivers.complete');
             Route::post('drivers/users/{user}/complete', [AdminDriverController::class, 'storeForUser'])->name('drivers.complete.store');
             Route::resource('drivers', AdminDriverController::class)->except('destroy');
             Route::patch('drivers/{driver}/deactivate', [AdminDriverController::class, 'deactivate'])->name('drivers.deactivate');
             Route::patch('drivers/{driver}/reactivate', [AdminDriverController::class, 'reactivate'])->name('drivers.reactivate');
 
+            Route::get('vehicles/export', [AdminVehicleController::class, 'export'])->name('vehicles.export');
             Route::resource('vehicles', AdminVehicleController::class)->except('destroy');
             Route::patch('vehicles/{vehicle}/deactivate', [AdminVehicleController::class, 'deactivate'])->name('vehicles.deactivate');
             Route::patch('vehicles/{vehicle}/reactivate', [AdminVehicleController::class, 'reactivate'])->name('vehicles.reactivate');

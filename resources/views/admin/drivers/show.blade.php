@@ -19,7 +19,7 @@
             <div><dt>Email</dt><dd>{{ $driver->user->email }}</dd></div>
             <div><dt>License</dt><dd>{{ $driver->license_number }}</dd></div>
             <div><dt>Phone</dt><dd>{{ $driver->phone ?? 'Not provided' }}</dd></div>
-            <div><dt>Status</dt><dd><span class="status-badge status-{{ $driver->status }}">{{ $driver->status }}</span></dd></div>
+            <div><dt>Status</dt><dd><x-status-badge :status="$driver->status" /></dd></div>
             <div><dt>Current vehicle</dt><dd>{{ $driver->currentAssignment?->vehicle?->plate_number ?? 'Unassigned' }}</dd></div>
         </dl>
     </section>

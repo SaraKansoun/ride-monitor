@@ -4,6 +4,22 @@
 
 @section('content')
     <section class="auth-panel">
+        <div class="auth-showcase" aria-hidden="true">
+            <div class="auth-showcase-copy">
+                <img class="auth-showcase-logo" src="{{ asset('images/project-icon.svg') }}" alt="">
+                <span class="auth-showcase-badge">Taxi safety</span>
+                <h2>Monitor every trip with confidence.</h2>
+                <p>Fleet incidents, driver performance, and human reviews stay organized in one focused dashboard.</p>
+            </div>
+
+            <img class="auth-showcase-image" src="{{ asset('images/taxi-dashboard.svg') }}" alt="">
+
+            <div class="auth-showcase-stats">
+                <span>24/7</span>
+                <span>Fleet visibility</span>
+            </div>
+        </div>
+
         <div class="auth-card">
             <div class="auth-heading">
                 <p class="app-kicker">Fleet safety access</p>

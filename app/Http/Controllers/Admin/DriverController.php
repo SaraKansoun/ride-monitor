@@ -8,65 +8,87 @@ use App\Http\Requests\Admin\StoreDriverRequest;
 use App\Http\Requests\Admin\UpdateDriverRequest;
 use App\Models\Driver;
 use App\Models\User;
+use App\Services\CsvExportService;
 use App\Services\DeactivationService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DriverController extends Controller
 {
-    public function __construct(private DeactivationService $deactivationService) {}
+    public function __construct(
+        private CsvExportService $csvExportService,
+        private DeactivationService $deactivationService
+    ) {}
 
     public function index(Request $request): View
     {
         Gate::authorize('viewAny', Driver::class);
 
         $status = $this->statusFilter($request);
+        $profile = $this->profileFilter($request);
+        $search = $this->searchTerm($request);
 
-        $drivers = User::role('driver')
-            ->with(['driverProfile.currentAssignments.vehicle'])
-            ->when($status === Driver::STATUS_ACTIVE, function ($query): void {
-                $query->where(function ($query): void {
-                    $query->where(function ($query): void {
-                        $query
-                            ->where('is_active', true)
-                            ->where('status', User::STATUS_ACTIVE)
-                            ->whereDoesntHave('driverProfile');
-                    })
-                        ->orWhereHas('driverProfile', fn ($query) => $query
-                            ->where('is_active', true)
-                            ->where('status', Driver::STATUS_ACTIVE));
-                });
-            })
-            ->when($status === 'inactive', function ($query): void {
-                $query->where(function ($query): void {
-                    $query->where(function ($query): void {
-                        $query
-                            ->where(function ($query): void {
-                                $query
-                                    ->where('is_active', false)
-                                    ->orWhere('status', '!=', User::STATUS_ACTIVE);
-                            })
-                            ->whereDoesntHave('driverProfile');
-                    })
-                        ->orWhereHas('driverProfile', fn ($query) => $query
-                            ->where(function ($query): void {
-                                $query
-                                    ->where('is_active', false)
-                                    ->orWhere('status', '!=', Driver::STATUS_ACTIVE);
-                            }));
-                });
-            })
+        $drivers = $this->filteredDriverUsers($status, $profile, $search)
             ->orderBy('name')
             ->paginate(15)
             ->withQueryString();
 
         return view('admin.drivers.index', [
             'drivers' => $drivers,
+            'profile' => $profile,
+            'search' => $search,
             'status' => $status,
         ]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        Gate::authorize('viewAny', Driver::class);
+
+        $status = $this->statusFilter($request);
+        $profile = $this->profileFilter($request);
+        $search = $this->searchTerm($request);
+        $drivers = $this->filteredDriverUsers($status, $profile, $search)
+            ->orderBy('name')
+            ->get();
+
+        return $this->csvExportService->download(
+            'drivers.csv',
+            ['Name', 'Email', 'License', 'Phone', 'Profile Status', 'Assigned Vehicles'],
+            $this->csvExportService->rows($drivers, function (User $driverUser): array {
+                $profile = $driverUser->driverProfile;
+
+                if (! $profile instanceof Driver) {
+                    return [
+                        $driverUser->name,
+                        $driverUser->email,
+                        'Missing profile',
+                        null,
+                        'missing_profile',
+                        'Unassigned',
+                    ];
+                }
+
+                $vehicles = $profile->currentAssignments
+                    ->pluck('vehicle.plate_number')
+                    ->filter()
+                    ->join(', ');
+
+                return [
+                    $driverUser->name,
+                    $driverUser->email,
+                    $profile->license_number,
+                    $profile->phone,
+                    $profile->status,
+                    $vehicles !== '' ? $vehicles : 'Unassigned',
+                ];
+            })
+        );
     }
 
     public function create(): View
@@ -276,5 +298,72 @@ class DriverController extends Controller
         $status = $request->string('status', Driver::STATUS_ACTIVE)->toString();
 
         return in_array($status, [Driver::STATUS_ACTIVE, 'inactive', 'all'], true) ? $status : Driver::STATUS_ACTIVE;
+    }
+
+    private function profileFilter(Request $request): string
+    {
+        $profile = $request->string('profile', 'all')->toString();
+
+        return in_array($profile, ['all', 'complete', 'missing'], true) ? $profile : 'all';
+    }
+
+    private function searchTerm(Request $request): string
+    {
+        return trim($request->string('q')->toString());
+    }
+
+    /**
+     * @return Builder<User>
+     */
+    private function filteredDriverUsers(string $status, string $profile, string $search): Builder
+    {
+        return User::role('driver')
+            ->with(['driverProfile.currentAssignments.vehicle'])
+            ->when($status === Driver::STATUS_ACTIVE, function (Builder $query): void {
+                $query->where(function (Builder $query): void {
+                    $query->where(function (Builder $query): void {
+                        $query
+                            ->where('is_active', true)
+                            ->where('status', User::STATUS_ACTIVE)
+                            ->whereDoesntHave('driverProfile');
+                    })
+                        ->orWhereHas('driverProfile', fn (Builder $query) => $query
+                            ->where('is_active', true)
+                            ->where('status', Driver::STATUS_ACTIVE));
+                });
+            })
+            ->when($status === 'inactive', function (Builder $query): void {
+                $query->where(function (Builder $query): void {
+                    $query->where(function (Builder $query): void {
+                        $query
+                            ->where(function (Builder $query): void {
+                                $query
+                                    ->where('is_active', false)
+                                    ->orWhere('status', '!=', User::STATUS_ACTIVE);
+                            })
+                            ->whereDoesntHave('driverProfile');
+                    })
+                        ->orWhereHas('driverProfile', fn (Builder $query) => $query
+                            ->where(function (Builder $query): void {
+                                $query
+                                    ->where('is_active', false)
+                                    ->orWhere('status', '!=', Driver::STATUS_ACTIVE);
+                            }));
+                });
+            })
+            ->when($profile === 'complete', fn (Builder $query) => $query->whereHas('driverProfile'))
+            ->when($profile === 'missing', fn (Builder $query) => $query->whereDoesntHave('driverProfile'))
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $query) use ($search): void {
+                    $query
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhereHas('driverProfile', function (Builder $query) use ($search): void {
+                            $query
+                                ->where('license_number', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%");
+                        });
+                });
+            });
     }
 }

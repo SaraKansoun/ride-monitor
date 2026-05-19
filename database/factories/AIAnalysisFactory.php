@@ -40,7 +40,7 @@ class AIAnalysisFactory extends Factory
             'confidence_score' => 0.67,
             'recommendation' => 'AI observations are advisory only. A monitor should review the incident details and uploaded media before making a final decision.',
             'raw_response' => [
-                'source' => 'local_metadata',
+                'source' => 'openai_responses',
                 'media' => [
                     ['file_type' => 'video', 'mime_type' => 'video/mp4'],
                 ],
