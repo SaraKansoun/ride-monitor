@@ -15,6 +15,10 @@ class AIAnalysis extends Model
 
     public const STATUS_PENDING = 'pending';
 
+    public const STATUS_PROCESSING = 'processing';
+
+    public const STATUS_AI_ANALYZING = 'ai_analyzing';
+
     public const STATUS_COMPLETED = 'completed';
 
     public const STATUS_FAILED = 'failed';
@@ -23,6 +27,14 @@ class AIAnalysis extends Model
 
     public const STATUSES = [
         self::STATUS_PENDING,
+        self::STATUS_PROCESSING,
+        self::STATUS_AI_ANALYZING,
+        self::STATUS_COMPLETED,
+        self::STATUS_FAILED,
+        self::STATUS_INACTIVE,
+    ];
+
+    public const TERMINAL_STATUSES = [
         self::STATUS_COMPLETED,
         self::STATUS_FAILED,
         self::STATUS_INACTIVE,
@@ -40,10 +52,14 @@ class AIAnalysis extends Model
      */
     protected $fillable = [
         'incident_id',
+        'media_fingerprint',
         'summary',
         'detected_events',
         'confidence_score',
         'recommendation',
+        'suggested_fault_decision',
+        'fault_confidence_score',
+        'fault_reasoning',
         'raw_response',
         'status',
         'is_active',
@@ -57,7 +73,7 @@ class AIAnalysis extends Model
      * @var array<string, mixed>
      */
     protected $attributes = [
-        'status' => self::STATUS_PENDING,
+        'status' => self::STATUS_PROCESSING,
         'is_active' => true,
     ];
 
@@ -94,6 +110,11 @@ class AIAnalysis extends Model
         return $this->is_active;
     }
 
+    public function isTerminal(): bool
+    {
+        return in_array($this->status, self::TERMINAL_STATUSES, true);
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -103,6 +124,7 @@ class AIAnalysis extends Model
     {
         return [
             'confidence_score' => 'float',
+            'fault_confidence_score' => 'float',
             'deactivated_at' => 'datetime',
             'is_active' => 'boolean',
             'raw_response' => 'array',

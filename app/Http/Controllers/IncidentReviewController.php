@@ -3,13 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreIncidentReviewRequest;
+use App\Models\AIAnalysis;
+use App\Models\Driver;
 use App\Models\Incident;
 use App\Models\IncidentReview;
 use App\Models\User;
+use App\Models\Vehicle;
 use App\Services\DriverScoreService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -23,7 +27,9 @@ class IncidentReviewController extends Controller
 
         $tab = $this->tabFilter($request);
         $reviewStatus = $this->reviewStatusFilter($request);
+        $aiStatus = $this->aiStatusFilter($request);
 
+        $aiAnalyses = null;
         $pendingIncidents = null;
         $reviews = null;
 
@@ -37,7 +43,7 @@ class IncidentReviewController extends Controller
                 ->latest()
                 ->paginate(15)
                 ->withQueryString();
-        } else {
+        } elseif ($tab === 'reviews') {
             $reviews = IncidentReview::query()
                 ->with(['incident.driver.user', 'incident.vehicle', 'reviewer'])
                 ->when($reviewStatus === 'active', fn ($query) => $query->active())
@@ -45,9 +51,26 @@ class IncidentReviewController extends Controller
                 ->latest('reviewed_at')
                 ->paginate(15)
                 ->withQueryString();
+        } else {
+            Gate::authorize('viewAny', AIAnalysis::class);
+
+            $aiAnalyses = AIAnalysis::query()
+                ->with(['incident.activeReview', 'incident.driver.user', 'incident.vehicle'])
+                ->when($aiStatus === 'active', fn ($query) => $query->active())
+                ->when($aiStatus === AIAnalysis::STATUS_INACTIVE, fn ($query) => $query->inactive())
+                ->latest()
+                ->paginate(15)
+                ->withQueryString();
         }
 
         return view('incident-reviews.index', [
+            'aiAnalyses' => $aiAnalyses,
+            'aiStatus' => $aiStatus,
+            'demoDrivers' => $tab === 'ai' && $this->demoMode() ? Driver::query()->active()->with('user')->orderBy('id')->get() : collect(),
+            'demoMode' => $tab === 'ai' && $this->demoMode(),
+            'demoTypes' => Incident::TYPES,
+            'demoVehicles' => $tab === 'ai' && $this->demoMode() ? Vehicle::query()->active()->orderBy('plate_number')->get() : collect(),
+            'demoVideos' => $tab === 'ai' && $this->demoMode() ? $this->demoVideos() : [],
             'pendingIncidents' => $pendingIncidents,
             'reviewStatus' => $reviewStatus,
             'reviews' => $reviews,
@@ -152,7 +175,7 @@ class IncidentReviewController extends Controller
     {
         $tab = $request->string('tab', 'pending')->toString();
 
-        return in_array($tab, ['pending', 'reviews'], true) ? $tab : 'pending';
+        return in_array($tab, ['pending', 'reviews', 'ai'], true) ? $tab : 'pending';
     }
 
     private function reviewStatusFilter(Request $request): string
@@ -160,5 +183,35 @@ class IncidentReviewController extends Controller
         $status = $request->string('status', 'active')->toString();
 
         return in_array($status, ['active', 'inactive', 'all'], true) ? $status : 'active';
+    }
+
+    private function aiStatusFilter(Request $request): string
+    {
+        $status = $request->string('status', 'active')->toString();
+
+        return in_array($status, ['active', AIAnalysis::STATUS_INACTIVE, 'all'], true) ? $status : 'active';
+    }
+
+    private function demoMode(): bool
+    {
+        return (bool) config('services.dashcam.demo_mode', true);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function demoVideos(): array
+    {
+        $directory = (string) config('services.dashcam.demo_video_path', storage_path('app/demo-videos'));
+
+        if (! is_dir($directory)) {
+            return [];
+        }
+
+        return collect(File::files($directory))
+            ->filter(fn ($file): bool => in_array(strtolower($file->getExtension()), ['mp4', 'mov', 'avi'], true))
+            ->map(fn ($file): string => $file->getFilename())
+            ->values()
+            ->all();
     }
 }

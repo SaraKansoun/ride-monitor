@@ -26,6 +26,7 @@ class IncidentMediaFactory extends Factory
             'file_type' => IncidentMedia::TYPE_IMAGE,
             'mime_type' => 'image/jpeg',
             'size' => fake()->numberBetween(50_000, 2_000_000),
+            'sha256_hash' => fake()->sha256(),
             'uploaded_by' => User::factory(),
             'is_active' => true,
             'deactivated_at' => null,

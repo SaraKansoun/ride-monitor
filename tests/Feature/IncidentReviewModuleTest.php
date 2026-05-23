@@ -14,18 +14,28 @@ beforeEach(function (): void {
 });
 
 test('review module uses tabs and a single sidebar link', function () {
+    $admin = createUserWithRole('admin');
     $monitor = createUserWithRole('monitor');
+
+    $this->actingAs($admin)
+        ->get(route('dashboard.admin'))
+        ->assertSuccessful()
+        ->assertSeeText('Review Center')
+        ->assertDontSeeText('AI Analyses');
 
     $this->actingAs($monitor)
         ->get(route('incident-reviews.index'))
         ->assertSuccessful()
+        ->assertSeeText('Review Center')
         ->assertSeeText('Pending Reviews')
-        ->assertSeeText('Incident Reviews');
+        ->assertSeeText('Completed Reviews')
+        ->assertSeeText('AI Processing');
 
     $this->actingAs($monitor)
         ->get(route('dashboard.monitor'))
         ->assertSuccessful()
-        ->assertSeeText('Incident Reviews')
+        ->assertSeeText('Review Center')
+        ->assertDontSeeText('AI Analyses')
         ->assertDontSeeText('Pending Reviews');
 
     $driver = createUserWithRole('driver');
@@ -33,7 +43,25 @@ test('review module uses tabs and a single sidebar link', function () {
     $this->actingAs($driver)
         ->get(route('dashboard.driver'))
         ->assertSuccessful()
-        ->assertDontSeeText('Incident Reviews');
+        ->assertDontSeeText('Review Center')
+        ->assertDontSeeText('AI Analyses');
+});
+
+test('review center compact tables use truncated text and icon actions', function () {
+    $monitor = createUserWithRole('monitor');
+    $incident = createIncidentForDriver('This long pending incident description should collapse quickly in table rows.');
+
+    $this->actingAs($monitor)
+        ->get(route('incident-reviews.index'))
+        ->assertSuccessful()
+        ->assertSeeText('This long pending incident description...')
+        ->assertSee('title="This long pending incident description should collapse quickly in table rows."', false)
+        ->assertSee('aria-label="Open incident"', false)
+        ->assertSee('aria-label="Start review"', false)
+        ->assertDontSeeText('Open incident')
+        ->assertDontSeeText('Start review');
+
+    expect($incident->exists)->toBeTrue();
 });
 
 test('monitor can start review and incident becomes under review', function () {

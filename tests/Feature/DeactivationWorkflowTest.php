@@ -250,13 +250,14 @@ test('driver scores can be deactivated and reactivated and inactive scores are h
     expect($score->fresh()->isActive())->toBeTrue();
 });
 
-test('deactivation controls use confirmation attributes and hard delete routes are absent', function () {
+test('users table omits hard delete and quick deactivate routes', function () {
     $admin = createUserWithRole('admin');
     $user = createUserWithRole('monitor');
 
     $this->actingAs($admin)
         ->get(route('admin.users.index'))
-        ->assertSee('data-confirm="Deactivate this user?', false)
+        ->assertDontSee(route('admin.users.deactivate', $user), false)
+        ->assertDontSee('Deactivate')
         ->assertDontSee('Delete');
 
     expect(Route::has('admin.users.destroy'))->toBeFalse()

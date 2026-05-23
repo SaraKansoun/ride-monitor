@@ -43,6 +43,36 @@ test('admin can create and edit users', function () {
         ->and($user->hasRole('admin'))->toBeTrue();
 });
 
+test('admin creates driver accounts through users module before completing profiles', function () {
+    $admin = createUserWithRole('admin');
+
+    $this->actingAs($admin)
+        ->get(route('admin.users.index'))
+        ->assertSuccessful()
+        ->assertSeeText('Create user');
+
+    $this->actingAs($admin)
+        ->post(route('admin.users.store'), [
+            'name' => 'Driver From Users',
+            'email' => 'driver.from.users@example.com',
+            'password' => 'password',
+            'role' => 'driver',
+            'status' => User::STATUS_ACTIVE,
+        ])
+        ->assertRedirect();
+
+    $driverUser = User::where('email', 'driver.from.users@example.com')->firstOrFail();
+
+    $this->actingAs($admin)
+        ->get(route('admin.drivers.index'))
+        ->assertSuccessful()
+        ->assertSeeText('Driver From Users')
+        ->assertSeeText('Missing profile')
+        ->assertSeeText('Complete profile');
+
+    expect($driverUser->hasRole('driver'))->toBeTrue();
+});
+
 test('admin can deactivate and reactivate users', function () {
     $admin = createUserWithRole('admin');
     $monitor = createUserWithRole('monitor');
@@ -58,6 +88,47 @@ test('admin can deactivate and reactivate users', function () {
         ->assertRedirect();
 
     expect($monitor->fresh()->status)->toBe(User::STATUS_ACTIVE);
+});
+
+test('users table removes deactivation shortcut but keeps reactivation action', function () {
+    $admin = createUserWithRole('admin');
+    $activeUser = createUserWithRole('monitor', ['email' => 'active.user@example.com']);
+    $inactiveUser = createUserWithRole('monitor', [
+        'email' => 'inactive.user@example.com',
+        'status' => User::STATUS_INACTIVE,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.users.index', ['status' => 'all']))
+        ->assertSuccessful()
+        ->assertSeeText($activeUser->email)
+        ->assertSeeText($inactiveUser->email)
+        ->assertDontSee(route('admin.users.deactivate', $activeUser), false)
+        ->assertDontSeeText('Deactivate')
+        ->assertSeeText('Reactivate');
+});
+
+test('admin can deactivate another admin through user edit status workflow', function () {
+    $admin = createUserWithRole('admin');
+    $otherAdmin = createUserWithRole('admin', [
+        'email' => 'other.admin@example.com',
+        'name' => 'Other Admin',
+    ]);
+
+    $this->actingAs($admin)
+        ->patch(route('admin.users.update', $otherAdmin), [
+            'name' => 'Other Admin',
+            'email' => 'other.admin@example.com',
+            'password' => '',
+            'role' => 'admin',
+            'status' => User::STATUS_INACTIVE,
+        ])
+        ->assertRedirect(route('admin.users.show', $otherAdmin));
+
+    $otherAdmin->refresh();
+
+    expect($otherAdmin->status)->toBe(User::STATUS_INACTIVE)
+        ->and($otherAdmin->isActive())->toBeFalse();
 });
 
 test('deactivated users cannot log in', function () {

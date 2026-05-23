@@ -27,10 +27,24 @@ return [
         'model' => env('OPENAI_MODEL', 'gpt-5.4-mini'),
         'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
         'timeout' => (int) env('OPENAI_TIMEOUT', 60),
-        'frame_count' => (int) env('OPENAI_FRAME_COUNT', 4),
-        'image_detail' => env('OPENAI_IMAGE_DETAIL', 'high'),
+        'frame_count' => (int) env('OPENAI_FRAME_COUNT', 3),
+        'image_detail' => env('OPENAI_IMAGE_DETAIL', 'low'),
+        'max_output_tokens' => (int) env('OPENAI_MAX_OUTPUT_TOKENS', 500),
         'ffmpeg_binary' => env('FFMPEG_BINARY', 'ffmpeg'),
         'ffmpeg_timeout' => (int) env('FFMPEG_TIMEOUT', 60),
+    ],
+
+    'dashcam' => [
+        'local_analysis_enabled' => env('AI_LOCAL_ANALYSIS_ENABLED', true),
+        'demo_mode' => env('AI_DEMO_MODE', true),
+        'openai_escalation_mode' => env('AI_OPENAI_ESCALATION_MODE', 'strict'),
+        'local_confidence_threshold' => (float) env('AI_LOCAL_CONFIDENCE_THRESHOLD', 0.55),
+        'openai_risk_threshold' => (float) env('AI_OPENAI_RISK_THRESHOLD', 0.65),
+        'python_binary' => env('YOLO_PYTHON_BINARY', 'python'),
+        'model_path' => env('YOLO_MODEL_PATH') ?: storage_path('app/ai-models/yolo11n.pt'),
+        'script_path' => env('YOLO_ANALYZER_SCRIPT') ?: resource_path('ai/dashcam_analyzer.py'),
+        'timeout' => (int) env('AI_LOCAL_ANALYSIS_TIMEOUT', 120),
+        'demo_video_path' => env('AI_DEMO_VIDEO_PATH') ?: storage_path('app/demo-videos'),
     ],
 
     'ses' => [

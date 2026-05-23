@@ -1,4 +1,4 @@
-<form class="admin-form" method="POST" action="{{ $action }}" enctype="multipart/form-data">
+<form class="admin-form" method="POST" action="{{ $action }}" enctype="multipart/form-data" data-incident-upload-form>
     @csrf
     @if ($method !== 'POST')
         @method($method)
@@ -55,4 +55,8 @@
         <button class="app-button app-button-primary" type="submit">{{ $submit }}</button>
         <a class="app-button app-button-muted" href="{{ route('incidents.index') }}">Cancel</a>
     </div>
+
+    <p class="upload-progress-note" data-upload-status>
+        Uploading dashcam media and preparing AI processing...
+    </p>
 </form>

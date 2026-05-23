@@ -1,0 +1,11 @@
+Figure 2-1: UML Use Case Diagram
+
+The use case diagram shows four actors. The admin is responsible for managing the main system data, including users, driver profiles, vehicles, vehicle assignments, deactivation actions, dashboard records, and reports. The monitor focuses on safety operations by viewing incidents, viewing uploaded media, starting reviews, editing incident descriptions before resolution, and submitting the final human review. The driver uses the system to report incidents, upload dashcam images or videos, view personal incident records, and view personal performance. The AI Analysis Service is shown as a supporting external actor because it assists the system by analyzing selected media frames. However, the AI result is advisory only. It does not make the final fault decision. The final incident decision is always submitted by a human monitor or admin.
+
+Figure 3-1: Entity Relationship Diagram
+
+The ER diagram shows that the database is centered around the users table. Users authenticate through Laravel's session-based authentication and receive roles and permissions through Spatie Laravel Permission. A driver user can have one driver profile, and each driver profile can have a safety score. Vehicles are connected to drivers through the driver_vehicle table, which stores assignment history using assigned_at and unassigned_at instead of replacing old assignments.
+
+Incidents are connected to drivers and may also be connected to vehicles. Each incident can have uploaded media files, AI analysis records, and final human review records. The AI analysis table stores advisory observations such as summary, detected events, confidence score, recommendation, and raw response data. The incident_reviews table stores the final decision made by a human monitor or admin. This separation is important because the AI supports the safety review process but does not decide legal fault.
+
+The database also supports safe deactivation instead of hard deletion. Important tables include is_active, deactivated_at, and deactivated_by fields. These fields preserve history and allow the system to show active records by default while still keeping inactive records available for audit, reporting, and future review.

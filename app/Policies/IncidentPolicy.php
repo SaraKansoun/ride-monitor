@@ -51,7 +51,9 @@ class IncidentPolicy
      */
     public function update(User $user, Incident $incident): bool
     {
-        return false;
+        return $user->can(PermissionCatalog::VIEW_INCIDENTS)
+            && $incident->isActive()
+            && in_array($incident->status, [Incident::STATUS_PENDING, Incident::STATUS_UNDER_REVIEW], true);
     }
 
     /**

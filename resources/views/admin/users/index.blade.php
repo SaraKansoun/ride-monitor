@@ -77,15 +77,7 @@
                                 @can('update', $user)
                                     <a href="{{ route('admin.users.edit', $user) }}">Edit</a>
                                 @endcan
-                                @if ($user->status === \App\Models\User::STATUS_ACTIVE)
-                                    @can('deactivate', $user)
-                                        <form method="POST" action="{{ route('admin.users.deactivate', $user) }}" data-confirm="Deactivate this user? They will no longer be able to sign in.">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit">Deactivate</button>
-                                        </form>
-                                    @endcan
-                                @else
+                                @if ($user->status !== \App\Models\User::STATUS_ACTIVE)
                                     @can('reactivate', $user)
                                         <form method="POST" action="{{ route('admin.users.reactivate', $user) }}">
                                             @csrf

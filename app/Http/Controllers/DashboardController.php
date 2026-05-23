@@ -50,7 +50,10 @@ class DashboardController extends Controller
         $resolvedIncidents = Incident::query()->active()->where('status', Incident::STATUS_RESOLVED)->count();
         $maintenanceVehicles = Vehicle::query()->where('status', Vehicle::STATUS_MAINTENANCE)->count();
         $lowScoreDrivers = DriverScore::query()->active()->where('score', '<', 50)->count();
-        $pendingAiAnalyses = AIAnalysis::query()->active()->where('status', AIAnalysis::STATUS_PENDING)->count();
+        $pendingAiAnalyses = AIAnalysis::query()
+            ->active()
+            ->whereIn('status', [AIAnalysis::STATUS_PENDING, AIAnalysis::STATUS_PROCESSING, AIAnalysis::STATUS_AI_ANALYZING])
+            ->count();
         $failedAiAnalyses = AIAnalysis::query()->active()->where('status', AIAnalysis::STATUS_FAILED)->count();
 
         return view('dashboard.admin', [

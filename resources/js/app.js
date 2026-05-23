@@ -305,12 +305,159 @@ const initializeAutoFilters = () => {
     });
 };
 
+const initializeIncidentUploadForms = () => {
+    if (window.driverSafetyIncidentUploadsInitialized) {
+        return;
+    }
+
+    window.driverSafetyIncidentUploadsInitialized = true;
+
+    document.querySelectorAll('[data-incident-upload-form]').forEach((form) => {
+        if (! (form instanceof HTMLFormElement)) {
+            return;
+        }
+
+        form.addEventListener('submit', () => {
+            const status = form.querySelector('[data-upload-status]');
+            const submitButton = form.querySelector('button[type="submit"]');
+
+            status?.classList.add('is-visible');
+
+            if (submitButton instanceof HTMLButtonElement) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Uploading...';
+            }
+        });
+    });
+};
+
+const initializeIncidentAiPolling = () => {
+    const terminalStatuses = ['completed', 'failed', 'inactive'];
+    const panels = document.querySelectorAll('[data-ai-analysis-panel]');
+
+    const updateTimeline = (panel, status) => {
+        const steps = {
+            uploaded: panel.querySelector('[data-ai-step="uploaded"]'),
+            processing: panel.querySelector('[data-ai-step="processing"]'),
+            analyzing: panel.querySelector('[data-ai-step="ai_analyzing"]'),
+            final: panel.querySelector('[data-ai-step="final"]'),
+        };
+
+        Object.values(steps).forEach((step) => {
+            step?.classList.remove('is-active', 'is-complete', 'is-failed');
+        });
+
+        steps.uploaded?.classList.add('is-complete');
+
+        if (['pending', 'processing'].includes(status)) {
+            steps.processing?.classList.add('is-active');
+        }
+
+        if (['ai_analyzing', 'completed'].includes(status)) {
+            steps.processing?.classList.add('is-complete');
+        }
+
+        if (status === 'ai_analyzing') {
+            steps.analyzing?.classList.add('is-active');
+        }
+
+        if (status === 'completed') {
+            steps.analyzing?.classList.add('is-complete');
+            steps.final?.classList.add('is-complete');
+        }
+
+        if (status === 'failed') {
+            steps.processing?.classList.add('is-failed');
+            steps.analyzing?.classList.add('is-failed');
+            steps.final?.classList.add('is-failed');
+        }
+    };
+
+    const updateStatusBadge = (panel, status, label) => {
+        const badge = panel.querySelector('[data-ai-status-badge]');
+
+        if (! badge) {
+            return;
+        }
+
+        badge.className = `status-badge status-${status}`;
+        badge.textContent = label;
+    };
+
+    panels.forEach((panel) => {
+        const statusUrl = panel.dataset.aiStatusUrl;
+        let currentStatus = panel.dataset.aiCurrentStatus;
+
+        if (! statusUrl || ! currentStatus || terminalStatuses.includes(currentStatus)) {
+            return;
+        }
+
+        const statusMessage = panel.querySelector('[data-ai-status-message]');
+
+        const poll = async () => {
+            try {
+                const response = await fetch(statusUrl, {
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (! response.ok) {
+                    window.clearInterval(intervalId);
+
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (! data.has_analysis) {
+                    if (statusMessage) {
+                        statusMessage.textContent = 'No active AI analysis exists for this incident.';
+                    }
+
+                    window.clearInterval(intervalId);
+
+                    return;
+                }
+
+                currentStatus = data.status;
+                panel.dataset.aiCurrentStatus = currentStatus;
+                updateStatusBadge(panel, currentStatus, data.status_label);
+                updateTimeline(panel, currentStatus);
+
+                if (statusMessage) {
+                    statusMessage.classList.toggle('is-failed', currentStatus === 'failed');
+                    statusMessage.textContent = currentStatus === 'failed' && data.error_message
+                        ? `AI analysis failed: ${data.error_message}`
+                        : data.status_label === 'Completed'
+                            ? 'AI observations are ready. Refreshing the report...'
+                            : `Current AI status: ${data.status_label}. The report will update automatically.`;
+                }
+
+                if (data.is_terminal) {
+                    window.clearInterval(intervalId);
+                    window.setTimeout(() => window.location.reload(), 700);
+                }
+            } catch {
+                window.clearInterval(intervalId);
+            }
+        };
+
+        updateTimeline(panel, currentStatus);
+        const intervalId = window.setInterval(poll, 3500);
+        window.setTimeout(poll, 1500);
+    });
+};
+
 const initializeDriverSafetyUi = () => {
     initializeVehicleSummaryPopovers();
     initializeSidebar();
     initializeUserMenu();
     initializeConfirmationForms();
     initializeAutoFilters();
+    initializeIncidentUploadForms();
+    initializeIncidentAiPolling();
 };
 
 if (document.readyState === 'loading') {

@@ -10,11 +10,18 @@
         </div>
         <div class="page-actions">
             <a class="app-button app-button-muted" href="{{ route('admin.drivers.export', request()->query()) }}">Export CSV</a>
-            @can('create', \App\Models\Driver::class)
-                <a class="app-button app-button-primary" href="{{ route('admin.drivers.create') }}">Create driver</a>
-            @endcan
         </div>
     </section>
+
+    @can('create', \App\Models\User::class)
+        <div class="onboarding-notice">
+            <x-nav-icon name="users" class="onboarding-notice-icon" />
+            <div class="onboarding-notice-content">
+                <strong>Driver onboarding starts in Users</strong>
+                <span>To add a new driver, create a user with the driver role from the Users module.</span>
+            </div>
+        </div>
+    @endcan
 
     <nav class="admin-filters" aria-label="Driver status filters">
         @foreach (['active' => 'Active', 'inactive' => 'Inactive', 'all' => 'All'] as $value => $label)

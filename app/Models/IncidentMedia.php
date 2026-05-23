@@ -35,6 +35,7 @@ class IncidentMedia extends Model
         'file_type',
         'mime_type',
         'size',
+        'sha256_hash',
         'uploaded_by',
         'is_active',
         'deactivated_at',

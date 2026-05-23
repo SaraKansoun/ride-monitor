@@ -8,6 +8,9 @@
         'inactive', 'retired', 'suspended' => 'Offline',
         'resolved', 'completed' => 'Completed',
         'pending' => 'Pending',
+        'processing' => 'Processing',
+        'ai_analyzing' => 'AI analyzing',
+        'uploading' => 'Uploading',
         default => str_replace('_', ' ', $statusValue),
     };
 @endphp

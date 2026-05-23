@@ -18,12 +18,38 @@ class IncidentVisualInputBuilder
      *     media: list<array<string, mixed>>
      * }
      */
-    public function build(Incident $incident): array
+    public function build(Incident $incident, ?DashcamAnalysisResult $localResult = null): array
     {
         $incident->loadMissing('media');
 
         $contentParts = [];
         $metadata = [];
+
+        if ($localResult instanceof DashcamAnalysisResult && $localResult->selectedFrames !== []) {
+            foreach ($localResult->selectedFrames as $frame) {
+                $contentParts[] = $this->base64ImageInput($frame['path'], 'image/jpeg');
+            }
+
+            $metadata[] = [
+                'id' => $localResult->mediaId,
+                'file_type' => IncidentMedia::TYPE_VIDEO,
+                'source' => 'local_selected_frames',
+                'visual_input_count' => count($localResult->selectedFrames),
+                'selected_frames' => collect($localResult->selectedFrames)
+                    ->map(fn (array $frame): array => [
+                        'timestamp_seconds' => $frame['timestamp_seconds'] ?? null,
+                        'score' => $frame['score'] ?? null,
+                        'reasons' => $frame['reasons'] ?? [],
+                    ])
+                    ->values()
+                    ->all(),
+            ];
+
+            return [
+                'content_parts' => $contentParts,
+                'media' => $metadata,
+            ];
+        }
 
         foreach ($incident->media as $media) {
             if (! $media->isActive()) {

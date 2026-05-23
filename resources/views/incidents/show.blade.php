@@ -71,14 +71,26 @@
     </section>
 
     <section class="workspace-panel">
-        <div>
-            <p class="app-kicker">Report</p>
-            <h2 class="section-title">Description</h2>
+        <div class="admin-header">
+            <div>
+                <p class="app-kicker">Report</p>
+                <h2 class="section-title">Description</h2>
+            </div>
+            @can('update', $incident)
+                <a class="app-button app-button-muted" href="{{ route('incidents.edit', $incident) }}">Edit description</a>
+            @endcan
         </div>
         <p class="section-copy">{{ $incident->description }}</p>
     </section>
 
-    <section class="workspace-panel">
+    <section
+        class="workspace-panel"
+        @if ($activeAiAnalysis)
+            data-ai-analysis-panel
+            data-ai-status-url="{{ route('incidents.ai-analysis.status', $incident) }}"
+            data-ai-current-status="{{ $activeAiAnalysis->status }}"
+        @endif
+    >
         <div class="admin-header">
             <div>
                 <p class="app-kicker">Advisory only</p>
@@ -87,22 +99,87 @@
         </div>
 
         @if ($activeAiAnalysis)
+            @php
+                $aiStatus = $activeAiAnalysis->status;
+                $suggestedFaultLabel = match ($activeAiAnalysis->suggested_fault_decision) {
+                    \App\Models\IncidentReview::FAULT_DRIVER => 'Possible driver fault',
+                    \App\Models\IncidentReview::FAULT_OTHER_PARTY => 'Possible other party fault',
+                    \App\Models\IncidentReview::FAULT_SHARED => 'Possible shared fault',
+                    \App\Models\IncidentReview::FAULT_UNCLEAR => 'Unclear',
+                    default => 'Pending',
+                };
+                $statusMessage = match ($aiStatus) {
+                    \App\Models\AIAnalysis::STATUS_PENDING => 'The dashcam upload is queued for AI processing. Start the queue worker to process waiting jobs.',
+                    \App\Models\AIAnalysis::STATUS_PROCESSING => 'The dashcam media is being processed locally. Important frames and risk signals are being prepared.',
+                    \App\Models\AIAnalysis::STATUS_AI_ANALYZING => 'Selected dashcam frames are being analyzed for advisory safety observations.',
+                    \App\Models\AIAnalysis::STATUS_COMPLETED => 'AI observations are ready for monitor review.',
+                    \App\Models\AIAnalysis::STATUS_FAILED => 'AI analysis failed. Manual review can continue without AI observations.',
+                    default => 'AI analysis status is being checked.',
+                };
+                $errorMessage = data_get($activeAiAnalysis->raw_response, 'error.message');
+                $processingStepClass = match (true) {
+                    in_array($aiStatus, [\App\Models\AIAnalysis::STATUS_AI_ANALYZING, \App\Models\AIAnalysis::STATUS_COMPLETED], true) => 'is-complete',
+                    $aiStatus === \App\Models\AIAnalysis::STATUS_FAILED => 'is-failed',
+                    in_array($aiStatus, [\App\Models\AIAnalysis::STATUS_PENDING, \App\Models\AIAnalysis::STATUS_PROCESSING], true) => 'is-active',
+                    default => '',
+                };
+                $analyzingStepClass = match (true) {
+                    $aiStatus === \App\Models\AIAnalysis::STATUS_COMPLETED => 'is-complete',
+                    $aiStatus === \App\Models\AIAnalysis::STATUS_AI_ANALYZING => 'is-active',
+                    $aiStatus === \App\Models\AIAnalysis::STATUS_FAILED => 'is-failed',
+                    default => '',
+                };
+                $finalStepClass = match ($aiStatus) {
+                    \App\Models\AIAnalysis::STATUS_COMPLETED => 'is-complete',
+                    \App\Models\AIAnalysis::STATUS_FAILED => 'is-failed',
+                    default => '',
+                };
+            @endphp
             <dl class="detail-grid">
-                <div><dt>Status</dt><dd><x-status-badge :status="$activeAiAnalysis->status" /></dd></div>
+                <div><dt>Status</dt><dd><x-status-badge :status="$aiStatus" data-ai-status-badge /></dd></div>
                 <div><dt>Confidence score</dt><dd>{{ $activeAiAnalysis->confidence_score !== null ? number_format($activeAiAnalysis->confidence_score, 2) : 'Pending' }}</dd></div>
                 <div><dt>Detected events</dt><dd>{{ $activeAiAnalysis->detected_events ?? 'Pending' }}</dd></div>
+                <div><dt>AI suggested fault</dt><dd>{{ $suggestedFaultLabel }}</dd></div>
+                <div><dt>Fault confidence</dt><dd>{{ $activeAiAnalysis->fault_confidence_score !== null ? number_format($activeAiAnalysis->fault_confidence_score, 2) : 'Pending' }}</dd></div>
                 <div><dt>Recommendation</dt><dd>{{ $activeAiAnalysis->recommendation ?? 'Manual review required before any decision.' }}</dd></div>
             </dl>
 
-            @if ($activeAiAnalysis->status === \App\Models\AIAnalysis::STATUS_COMPLETED)
+            <div class="ai-workflow" aria-label="AI analysis processing timeline">
+                <div class="ai-workflow-step is-complete" data-ai-step="uploaded">
+                    <strong>Uploaded</strong>
+                    <span>Media saved</span>
+                </div>
+                <div class="ai-workflow-step {{ $processingStepClass }}" data-ai-step="processing">
+                    <strong>Processing</strong>
+                    <span>Local screening</span>
+                </div>
+                <div class="ai-workflow-step {{ $analyzingStepClass }}" data-ai-step="ai_analyzing">
+                    <strong>AI analyzing</strong>
+                    <span>Selected frames</span>
+                </div>
+                <div class="ai-workflow-step {{ $finalStepClass }}" data-ai-step="final">
+                    <strong>Completed / Failed</strong>
+                    <span>Result saved</span>
+                </div>
+            </div>
+
+            <p class="ai-status-note @if ($aiStatus === \App\Models\AIAnalysis::STATUS_FAILED) is-failed @endif" data-ai-status-message>
+                {{ $statusMessage }}
+            </p>
+
+            @if ($aiStatus === \App\Models\AIAnalysis::STATUS_COMPLETED)
                 <p class="section-copy">{{ $activeAiAnalysis->summary }}</p>
-                <p class="section-copy">AI analysis is advisory only and does not decide legal fault. A monitor makes the final human decision.</p>
-            @elseif ($activeAiAnalysis->status === \App\Models\AIAnalysis::STATUS_FAILED)
+                <p class="section-copy">{{ $activeAiAnalysis->fault_reasoning ?? 'Fault suggestion is not available yet.' }}</p>
+                <p class="section-copy">AI observations are advisory only. AI suggested fault is advisory only. Final decision must be submitted by a monitor before any driver score changes.</p>
+            @elseif ($aiStatus === \App\Models\AIAnalysis::STATUS_FAILED)
                 <p class="section-copy">{{ $activeAiAnalysis->summary }}</p>
+                @if ($errorMessage)
+                    <p class="section-copy">Processing error: {{ $errorMessage }}</p>
+                @endif
                 <p class="section-copy">AI observations are unavailable. A monitor should continue with manual review.</p>
             @else
-                <p class="section-copy">AI observations are not ready yet.</p>
-                <p class="section-copy">AI analysis is advisory only and does not decide legal fault. A monitor makes the final human decision.</p>
+                <p class="section-copy">AI processing is still running. This page will update automatically when final observations are saved.</p>
+                <p class="section-copy">AI observations are advisory only. AI suggested fault is advisory only. Final decision must be submitted by a monitor before any driver score changes.</p>
             @endif
         @else
             <p class="section-copy">No active AI analysis exists for this incident.</p>

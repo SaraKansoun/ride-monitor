@@ -95,7 +95,7 @@
                 @forelse ($incidents as $incident)
                     <tr>
                         <td>#{{ $incident->id }}</td>
-                        <td>{{ str($incident->description)->limit(80) }}</td>
+                        <td><x-compact-text :text="$incident->description" /></td>
                         <td>{{ $incident->driver->user->name }}</td>
                         <td>{{ $incident->vehicle?->plate_number ?? 'Not selected' }}</td>
                         <td>{{ str_replace('_', ' ', $incident->type) }}</td>
@@ -105,13 +105,13 @@
                         <td>{{ $incident->created_at->format('Y-m-d H:i') }}</td>
                         <td>
                             <div class="inline-actions">
-                                <a href="{{ route('incidents.show', $incident) }}">View</a>
+                                <x-action-icon name="view" label="View incident" :href="route('incidents.show', $incident)" />
                                 @if ($incident->is_active)
                                     @can('deactivate', $incident)
                                         <form method="POST" action="{{ route('incidents.deactivate', $incident) }}" data-confirm="Deactivate this incident?">
                                             @csrf
                                             @method('PATCH')
-                                            <button type="submit">Deactivate</button>
+                                            <x-action-icon name="deactivate" label="Deactivate incident" type="submit" />
                                         </form>
                                     @endcan
                                 @else
@@ -119,7 +119,7 @@
                                         <form method="POST" action="{{ route('incidents.reactivate', $incident) }}">
                                             @csrf
                                             @method('PATCH')
-                                            <button type="submit">Reactivate</button>
+                                            <x-action-icon name="reactivate" label="Reactivate incident" type="submit" />
                                         </form>
                                     @endcan
                                 @endif

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\AIAnalysis;
 use App\Models\Incident;
+use App\Models\IncidentReview;
 use App\Services\AIIncidentAnalysisService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -37,24 +38,38 @@ class AnalyzeIncidentJob implements ShouldQueue
             ])
             ->find($this->aiAnalysisId);
 
-        if (! $aiAnalysis instanceof AIAnalysis || ! $aiAnalysis->isActive()) {
+        if (! $aiAnalysis instanceof AIAnalysis || ! $aiAnalysis->isActive() || $aiAnalysis->isTerminal()) {
             return;
         }
 
         try {
+            $aiAnalysis->update([
+                'status' => AIAnalysis::STATUS_PROCESSING,
+            ]);
+
             $incident = $aiAnalysis->incident;
 
             if (! $incident instanceof Incident) {
                 throw new RuntimeException('The incident for this AI analysis could not be found.');
             }
 
-            $result = $analysisService->analyze($incident);
+            $result = $analysisService->analyze(
+                $incident,
+                function () use ($aiAnalysis): void {
+                    $aiAnalysis->update([
+                        'status' => AIAnalysis::STATUS_AI_ANALYZING,
+                    ]);
+                }
+            );
 
             $aiAnalysis->update([
                 'summary' => $result['summary'],
                 'detected_events' => $result['detected_events'],
                 'confidence_score' => $result['confidence_score'],
                 'recommendation' => $result['recommendation'],
+                'suggested_fault_decision' => $result['suggested_fault_decision'],
+                'fault_confidence_score' => $result['fault_confidence_score'],
+                'fault_reasoning' => $result['fault_reasoning'],
                 'raw_response' => $result['raw_response'],
                 'status' => AIAnalysis::STATUS_COMPLETED,
             ]);
@@ -87,6 +102,9 @@ class AnalyzeIncidentJob implements ShouldQueue
             'detected_events' => null,
             'confidence_score' => null,
             'recommendation' => 'AI observations are unavailable. Manual review recommended.',
+            'suggested_fault_decision' => IncidentReview::FAULT_UNCLEAR,
+            'fault_confidence_score' => 0.0,
+            'fault_reasoning' => 'AI analysis failed, so no reliable fault suggestion is available. Manual monitor review is required.',
             'raw_response' => [
                 'source' => 'openai_responses',
                 'error' => [

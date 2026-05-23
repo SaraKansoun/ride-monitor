@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\AIAnalysis;
 use App\Models\Incident;
+use App\Models\IncidentReview;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -20,12 +21,16 @@ class AIAnalysisFactory extends Factory
     {
         return [
             'incident_id' => Incident::factory(),
+            'media_fingerprint' => null,
             'summary' => null,
             'detected_events' => null,
             'confidence_score' => null,
             'recommendation' => null,
+            'suggested_fault_decision' => null,
+            'fault_confidence_score' => null,
+            'fault_reasoning' => null,
             'raw_response' => null,
-            'status' => AIAnalysis::STATUS_PENDING,
+            'status' => AIAnalysis::STATUS_PROCESSING,
             'is_active' => true,
             'deactivated_at' => null,
             'deactivated_by' => null,
@@ -39,6 +44,9 @@ class AIAnalysisFactory extends Factory
             'detected_events' => 'possible unsafe driving indicators, video metadata available for manual review',
             'confidence_score' => 0.67,
             'recommendation' => 'AI observations are advisory only. A monitor should review the incident details and uploaded media before making a final decision.',
+            'suggested_fault_decision' => IncidentReview::FAULT_UNCLEAR,
+            'fault_confidence_score' => 0.42,
+            'fault_reasoning' => 'The available media appears to need human review before any fault decision is made.',
             'raw_response' => [
                 'source' => 'openai_responses',
                 'media' => [

@@ -388,7 +388,7 @@
     }
 
     .taxi-hero-visual {
-        @apply absolute bottom-5 right-5 z-10 hidden max-w-48 items-center gap-3 whitespace-nowrap rounded-xl border border-yellow-300/30 bg-black/50 px-4 py-3 text-sm font-black uppercase tracking-wide text-yellow-300 shadow-xl shadow-black/30 backdrop-blur lg:flex;
+        @apply absolute bottom-5 right-5 z-10 hidden min-w-max items-center gap-3 whitespace-nowrap rounded-xl border border-yellow-300/30 bg-black/50 px-4 py-3 text-sm font-black uppercase tracking-wide text-yellow-300 shadow-xl shadow-black/30 backdrop-blur lg:flex;
     }
 
     .taxi-hero-visual img {
@@ -396,7 +396,7 @@
     }
 
     .taxi-hero-visual span {
-        @apply truncate;
+        @apply shrink-0;
     }
 
     .dashboard-grid {
@@ -976,6 +976,34 @@
         @apply mt-4 max-w-2xl text-sm leading-6 text-zinc-600;
     }
 
+    .onboarding-notice {
+        @apply mb-5 flex flex-col gap-4 rounded-2xl border border-yellow-300/70 bg-yellow-50/90 p-4 shadow-lg shadow-yellow-500/10 ring-1 ring-yellow-200/70 sm:flex-row sm:items-center;
+    }
+
+    .onboarding-notice-icon {
+        @apply flex size-11 shrink-0 items-center justify-center rounded-xl bg-zinc-950 text-yellow-300 shadow-lg shadow-yellow-500/20;
+    }
+
+    .onboarding-notice-icon svg {
+        @apply size-5;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 2;
+    }
+
+    .onboarding-notice-content {
+        @apply min-w-0;
+    }
+
+    .onboarding-notice-content strong {
+        @apply block text-sm font-black text-zinc-950;
+    }
+
+    .onboarding-notice-content span {
+        @apply mt-1 block text-sm font-semibold leading-6 text-zinc-600;
+    }
+
     .flash-message {
         @apply mb-5 rounded-md border px-4 py-3 text-sm font-semibold;
     }
@@ -1046,7 +1074,7 @@
     }
 
     .admin-table td {
-        @apply px-4 py-4 text-zinc-700;
+        @apply whitespace-nowrap px-4 py-3 align-middle text-zinc-700;
     }
 
     .admin-table tbody {
@@ -1070,7 +1098,11 @@
     }
 
     .inline-actions {
-        @apply flex flex-wrap items-center gap-3 text-sm font-black;
+        @apply flex flex-nowrap items-center gap-1.5 text-sm font-black;
+    }
+
+    .inline-actions form {
+        @apply inline-flex;
     }
 
     .inline-actions a {
@@ -1080,6 +1112,29 @@
     .inline-actions button,
     .table-button {
         @apply text-sm font-black text-zinc-800 transition hover:text-yellow-700;
+    }
+
+    .inline-actions a.action-icon-button {
+        @apply no-underline decoration-transparent;
+    }
+
+    .action-icon-button {
+        @apply inline-flex size-8 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-700 shadow-sm transition hover:-translate-y-0.5 hover:border-yellow-300 hover:bg-yellow-50 hover:text-zinc-950 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    }
+
+    .action-icon-button svg {
+        @apply size-4;
+    }
+
+    .action-icon-button path {
+        @apply stroke-current;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .table-compact-text {
+        @apply block max-w-48 truncate font-semibold text-zinc-800;
     }
 
     .vehicle-summary {
@@ -1185,8 +1240,14 @@
         @apply border-zinc-950 bg-zinc-950 text-yellow-300;
     }
 
-    .status-pending {
+    .status-pending,
+    .status-uploading,
+    .status-processing {
         @apply border-yellow-300 bg-yellow-50 text-yellow-800;
+    }
+
+    .status-ai_analyzing {
+        @apply border-blue-200 bg-blue-50 text-blue-800;
     }
 
     .status-low {
@@ -1212,6 +1273,63 @@
 
     .status-failed {
         @apply border-red-200 bg-red-50 text-red-800;
+    }
+
+    .ai-workflow {
+        @apply mt-5 grid gap-3 sm:grid-cols-4;
+    }
+
+    .ai-workflow-step {
+        @apply relative rounded-lg border border-zinc-200 bg-white p-3 text-sm shadow-sm transition duration-200;
+    }
+
+    .ai-workflow-step::before {
+        @apply mb-2 block size-2 rounded-full bg-zinc-300;
+        content: '';
+    }
+
+    .ai-workflow-step.is-active {
+        @apply border-yellow-300 bg-yellow-50 text-zinc-950 shadow-md;
+    }
+
+    .ai-workflow-step.is-active::before {
+        @apply bg-yellow-400;
+    }
+
+    .ai-workflow-step.is-complete {
+        @apply border-zinc-950 bg-zinc-950 text-white;
+    }
+
+    .ai-workflow-step.is-complete::before {
+        @apply bg-yellow-300;
+    }
+
+    .ai-workflow-step.is-failed {
+        @apply border-red-200 bg-red-50 text-red-800;
+    }
+
+    .ai-workflow-step strong {
+        @apply block font-black;
+    }
+
+    .ai-workflow-step span {
+        @apply mt-1 block text-xs opacity-75;
+    }
+
+    .ai-status-note {
+        @apply mt-4 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm font-semibold text-yellow-900;
+    }
+
+    .ai-status-note.is-failed {
+        @apply border-red-200 bg-red-50 text-red-800;
+    }
+
+    .upload-progress-note {
+        @apply hidden rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm font-semibold text-yellow-900;
+    }
+
+    .upload-progress-note.is-visible {
+        @apply block;
     }
 
     .status-crash,

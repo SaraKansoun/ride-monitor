@@ -154,6 +154,9 @@ class DeactivationService
             || $aiAnalysis->detected_events !== null
             || $aiAnalysis->confidence_score !== null
             || $aiAnalysis->recommendation !== null
+            || $aiAnalysis->suggested_fault_decision !== null
+            || $aiAnalysis->fault_confidence_score !== null
+            || $aiAnalysis->fault_reasoning !== null
             || $aiAnalysis->raw_response !== null;
 
         $aiAnalysis->update([

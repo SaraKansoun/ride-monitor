@@ -18,7 +18,11 @@ test('driver role users appear as missing profiles', function () {
         ->get(route('admin.drivers.index'))
         ->assertSuccessful()
         ->assertSee($driverUser->email)
-        ->assertSee('Missing profile');
+        ->assertSee('Missing profile')
+        ->assertSee('Complete profile')
+        ->assertSeeText('Driver onboarding starts in Users')
+        ->assertSeeText('To add a new driver, create a user with the driver role from the Users module.')
+        ->assertDontSee('Create driver');
 });
 
 test('drivers index summarizes multiple current vehicle assignments', function () {

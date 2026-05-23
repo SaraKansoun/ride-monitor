@@ -3,16 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreIncidentRequest;
+use App\Http\Requests\UpdateIncidentDescriptionRequest;
 use App\Jobs\AnalyzeIncidentJob;
 use App\Models\AIAnalysis;
 use App\Models\Driver;
 use App\Models\DriverVehicle;
 use App\Models\Incident;
 use App\Models\IncidentMedia;
+use App\Models\IncidentReview;
 use App\Models\User;
+use App\Services\AIAnalysisReuseService;
 use App\Services\CsvExportService;
+use App\Services\MediaFingerprintService;
 use App\Services\PermissionCatalog;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +28,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IncidentController extends Controller
 {
-    public function __construct(private CsvExportService $csvExportService) {}
+    public function __construct(
+        private CsvExportService $csvExportService,
+        private MediaFingerprintService $mediaFingerprintService,
+        private AIAnalysisReuseService $aiAnalysisReuseService
+    ) {}
 
     public function index(Request $request): View
     {
@@ -126,10 +135,11 @@ class IncidentController extends Controller
 
         $aiAnalysis = null;
         $hasVisualMedia = false;
+        $visualMediaHashes = [];
         $mediaFiles = $request->file('media', []);
         $mediaFiles = is_array($mediaFiles) ? $mediaFiles : [];
 
-        $incident = DB::transaction(function () use ($driver, &$hasVisualMedia, $mediaFiles, $request, &$aiAnalysis, $user): Incident {
+        $incident = DB::transaction(function () use ($driver, &$hasVisualMedia, $mediaFiles, $request, &$aiAnalysis, $user, &$visualMediaHashes): Incident {
             $incident = Incident::query()->create([
                 'driver_id' => $driver->id,
                 'vehicle_id' => $request->validated('vehicle_id'),
@@ -141,6 +151,7 @@ class IncidentController extends Controller
             ]);
 
             foreach ($mediaFiles as $file) {
+                $sha256Hash = $this->mediaFingerprintService->hashUploadedFile($file);
                 $path = $file->store('incident-media', 'public');
 
                 if ($path === false) {
@@ -152,32 +163,71 @@ class IncidentController extends Controller
                 $hasVisualMedia = $hasVisualMedia
                     || in_array($fileType, [IncidentMedia::TYPE_IMAGE, IncidentMedia::TYPE_VIDEO], true);
 
+                if (in_array($fileType, [IncidentMedia::TYPE_IMAGE, IncidentMedia::TYPE_VIDEO], true)) {
+                    $visualMediaHashes[] = $sha256Hash;
+                }
+
                 $incident->media()->create([
                     'file_path' => $path,
                     'original_name' => $file->getClientOriginalName(),
                     'file_type' => $fileType,
                     'mime_type' => $mimeType,
                     'size' => $file->getSize(),
+                    'sha256_hash' => $sha256Hash,
                     'uploaded_by' => $user->id,
                     'is_active' => true,
                 ]);
             }
 
             if ($hasVisualMedia) {
-                $aiAnalysis = $incident->aiAnalyses()->create([
-                    'status' => AIAnalysis::STATUS_PENDING,
-                    'is_active' => true,
-                ]);
+                $fingerprint = $this->mediaFingerprintService->fingerprintFromHashes($visualMediaHashes);
+
+                $aiAnalysis = $incident->aiAnalyses()->create($this->aiAnalysisReuseService->attributesFor($fingerprint));
             }
 
             return $incident;
         });
 
-        if ($aiAnalysis instanceof AIAnalysis) {
+        if ($aiAnalysis instanceof AIAnalysis && ! $aiAnalysis->isTerminal()) {
             AnalyzeIncidentJob::dispatch($aiAnalysis->id);
         }
 
         return redirect()->route('incidents.show', $incident)->with('status', 'Incident reported.');
+    }
+
+    public function aiAnalysisStatus(Incident $incident): JsonResponse
+    {
+        Gate::authorize('view', $incident);
+
+        $incident->load('activeAiAnalysis');
+
+        $aiAnalysis = $incident->activeAiAnalysis;
+
+        if (! $aiAnalysis instanceof AIAnalysis) {
+            return response()->json([
+                'has_analysis' => false,
+                'status' => null,
+                'status_label' => 'No active analysis',
+                'is_terminal' => true,
+            ]);
+        }
+
+        return response()->json([
+            'has_analysis' => true,
+            'status' => $aiAnalysis->status,
+            'status_label' => $this->aiStatusLabel($aiAnalysis->status),
+            'is_terminal' => $aiAnalysis->isTerminal(),
+            'summary' => $aiAnalysis->summary,
+            'detected_events' => $aiAnalysis->detected_events,
+            'confidence_score' => $aiAnalysis->confidence_score,
+            'recommendation' => $aiAnalysis->recommendation,
+            'suggested_fault_decision' => $aiAnalysis->suggested_fault_decision,
+            'suggested_fault_label' => $this->suggestedFaultLabel($aiAnalysis->suggested_fault_decision),
+            'fault_confidence_score' => $aiAnalysis->fault_confidence_score,
+            'fault_reasoning' => $aiAnalysis->fault_reasoning,
+            'error_message' => data_get($aiAnalysis->raw_response, 'error.message'),
+            'updated_at' => $aiAnalysis->updated_at?->toIso8601String(),
+        ]);
     }
 
     public function show(Request $request, Incident $incident): View
@@ -206,6 +256,22 @@ class IncidentController extends Controller
             'incident' => $incident,
             'mediaStatus' => $mediaStatus,
         ]);
+    }
+
+    public function edit(Incident $incident): View
+    {
+        Gate::authorize('update', $incident);
+
+        return view('incidents.edit', [
+            'incident' => $incident,
+        ]);
+    }
+
+    public function update(UpdateIncidentDescriptionRequest $request, Incident $incident): RedirectResponse
+    {
+        $incident->update($request->safe()->only(['description']));
+
+        return redirect()->route('incidents.show', $incident)->with('status', 'Incident description updated.');
     }
 
     public function deactivate(Request $request, Incident $incident): RedirectResponse
@@ -298,6 +364,30 @@ class IncidentController extends Controller
         }
 
         return IncidentMedia::TYPE_DOCUMENT;
+    }
+
+    private function aiStatusLabel(?string $status): string
+    {
+        return match ($status) {
+            AIAnalysis::STATUS_PENDING => 'Queued',
+            AIAnalysis::STATUS_PROCESSING => 'Processing',
+            AIAnalysis::STATUS_AI_ANALYZING => 'AI analyzing',
+            AIAnalysis::STATUS_COMPLETED => 'Completed',
+            AIAnalysis::STATUS_FAILED => 'Failed',
+            AIAnalysis::STATUS_INACTIVE => 'Inactive',
+            default => 'Unknown',
+        };
+    }
+
+    private function suggestedFaultLabel(?string $suggestedFaultDecision): string
+    {
+        return match ($suggestedFaultDecision) {
+            IncidentReview::FAULT_DRIVER => 'Possible driver fault',
+            IncidentReview::FAULT_OTHER_PARTY => 'Possible other party fault',
+            IncidentReview::FAULT_SHARED => 'Possible shared fault',
+            IncidentReview::FAULT_UNCLEAR => 'Unclear',
+            default => 'Pending',
+        };
     }
 
     /**

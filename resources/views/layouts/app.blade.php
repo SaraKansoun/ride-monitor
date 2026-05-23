@@ -40,17 +40,10 @@
                             </a>
                         @endcanany
 
-                        @can('view ai analyses')
-                            <a @class(['app-nav-link', 'is-active' => request()->routeIs('ai-analyses.*')]) href="{{ route('ai-analyses.index') }}">
-                                <x-nav-icon name="ai" />
-                                AI Analyses
-                            </a>
-                        @endcan
-
                         @can('review incidents')
                             <a @class(['app-nav-link', 'is-active' => request()->routeIs('incident-reviews.*')]) href="{{ route('incident-reviews.index') }}">
                                 <x-nav-icon name="reviews" />
-                                Incident Reviews
+                                Review Center
                             </a>
                         @endcan
 

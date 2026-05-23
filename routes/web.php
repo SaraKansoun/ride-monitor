@@ -35,12 +35,14 @@ Route::middleware('auth')->group(function (): void {
         Route::get('driver-performance', [DriverScoreController::class, 'performance'])->middleware('permission:view own safety score')->name('driver-performance.show');
 
         Route::get('incidents/export', [IncidentController::class, 'export'])->name('incidents.export');
-        Route::resource('incidents', IncidentController::class)->only(['index', 'create', 'store', 'show']);
+        Route::get('incidents/{incident}/ai-analysis/status', [IncidentController::class, 'aiAnalysisStatus'])->name('incidents.ai-analysis.status');
+        Route::resource('incidents', IncidentController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update']);
         Route::patch('incidents/{incident}/deactivate', [IncidentController::class, 'deactivate'])->name('incidents.deactivate');
         Route::patch('incidents/{incident}/reactivate', [IncidentController::class, 'reactivate'])->name('incidents.reactivate');
         Route::get('incident-media/{incidentMedia}', [IncidentMediaController::class, 'show'])->name('incident-media.show');
 
         Route::get('ai-analyses', [AIAnalysisController::class, 'index'])->name('ai-analyses.index');
+        Route::post('ai-analyses/demo', [AIAnalysisController::class, 'storeDemo'])->name('ai-analyses.demo.store');
         Route::patch('ai-analyses/{aiAnalysis}/deactivate', [AIAnalysisController::class, 'deactivate'])->name('ai-analyses.deactivate');
         Route::patch('ai-analyses/{aiAnalysis}/reactivate', [AIAnalysisController::class, 'reactivate'])->name('ai-analyses.reactivate');
 
