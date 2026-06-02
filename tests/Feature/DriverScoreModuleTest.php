@@ -39,6 +39,20 @@ test('missing score is safely initialized when recalculation runs', function () 
         ->and($score->is_active)->toBeTrue();
 });
 
+test('score impact helper matches review penalty rules', function (string $faultDecision, string $incidentType, int $expectedPenalty) {
+    expect(app(DriverScoreService::class)->penaltyForDecision($faultDecision, $incidentType))
+        ->toBe($expectedPenalty);
+})->with([
+    'crash driver fault' => [IncidentReview::FAULT_DRIVER, Incident::TYPE_CRASH, 20],
+    'crash shared fault' => [IncidentReview::FAULT_SHARED, Incident::TYPE_CRASH, 10],
+    'crash other party fault' => [IncidentReview::FAULT_OTHER_PARTY, Incident::TYPE_CRASH, 0],
+    'crash unclear' => [IncidentReview::FAULT_UNCLEAR, Incident::TYPE_CRASH, 0],
+    'unsafe driving driver fault' => [IncidentReview::FAULT_DRIVER, Incident::TYPE_UNSAFE_DRIVING, 10],
+    'unsafe driving unclear' => [IncidentReview::FAULT_UNCLEAR, Incident::TYPE_UNSAFE_DRIVING, 10],
+    'complaint driver fault' => [IncidentReview::FAULT_DRIVER, Incident::TYPE_COMPLAINT, 5],
+    'complaint unclear' => [IncidentReview::FAULT_UNCLEAR, Incident::TYPE_COMPLAINT, 5],
+]);
+
 test('score updates after a monitor submits a resolved review', function () {
     $monitor = createUserWithRole('monitor');
     $driverUser = createUserWithRole('driver');

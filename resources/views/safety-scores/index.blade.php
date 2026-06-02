@@ -12,7 +12,7 @@
             <a class="app-button app-button-muted" href="{{ route('safety-scores.export', request()->query()) }}">Export CSV</a>
         </div>
 
-        <p class="section-copy">Scores are recalculated from active final human reviews only. Inactive drivers are hidden from the active list.</p>
+        <p class="section-copy safety-scores-copy">Scores update after final human reviews, while inactive score records remain available through the filters.</p>
 
         <div class="admin-filters">
             @foreach (['active' => 'Active', 'inactive' => 'Inactive', 'all' => 'All'] as $filter => $label)

@@ -400,57 +400,131 @@
     }
 
     .dashboard-grid {
-        @apply grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4;
+        @apply grid grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-4;
+    }
+
+    .admin-metric-grid {
+        @apply items-stretch xl:grid-cols-3 2xl:grid-cols-3;
+    }
+
+    .driver-metric-grid {
+        @apply items-stretch xl:grid-cols-4;
+    }
+
+    .monitor-metric-grid {
+        @apply items-stretch xl:grid-cols-3 2xl:grid-cols-3;
     }
 
     .summary-card {
-        @apply relative overflow-hidden rounded-2xl border border-white bg-white/95 p-5 shadow-lg shadow-zinc-900/5 ring-1 ring-zinc-200/70 transition duration-300 hover:-translate-y-1 hover:border-yellow-300 hover:shadow-2xl hover:shadow-yellow-500/10;
+        @apply relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-white/70 transition duration-300 hover:-translate-y-0.5 hover:border-yellow-300 hover:shadow-lg hover:shadow-zinc-900/10;
         animation: dashboard-enter 0.55s ease both;
     }
 
     .summary-card::before {
-        @apply absolute inset-x-0 top-0 h-1 bg-yellow-300;
+        @apply absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-yellow-300 via-yellow-400 to-zinc-900;
         content: '';
     }
 
     .dashboard-metric-card {
-        @apply min-h-44;
+        @apply h-full min-h-0;
     }
 
     .summary-icon {
-        @apply mb-5 flex size-11 items-center justify-center rounded-md bg-zinc-950 text-xs font-black text-yellow-300;
+        @apply relative z-10 mb-4 flex size-10 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-950 text-xs font-black text-yellow-300 shadow-sm shadow-zinc-900/5 transition duration-300;
     }
 
     .summary-icon svg {
         @apply size-5;
     }
 
+    .summary-card:hover .summary-icon {
+        @apply bg-yellow-300 text-zinc-950 shadow-yellow-300/20;
+    }
+
     .summary-card strong {
-        @apply mt-2 block text-4xl font-black text-zinc-950;
+        @apply relative z-10 mt-2 block text-4xl font-black leading-none text-zinc-950;
     }
 
     .summary-label {
-        @apply block text-sm font-semibold capitalize text-zinc-500;
+        @apply relative z-10 block text-xs font-black uppercase tracking-wide text-zinc-500;
     }
 
     .summary-trend {
-        @apply mt-4 inline-flex rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs font-black text-yellow-800;
+        @apply relative z-10 mt-4 inline-flex rounded-full border border-yellow-200 bg-yellow-50 px-2.5 py-1 text-xs font-black text-yellow-800 shadow-sm;
     }
 
     .workspace-panel {
-        @apply mt-6 rounded-2xl border border-white bg-white/95 p-6 shadow-lg shadow-zinc-900/5 ring-1 ring-zinc-200/70 transition duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-zinc-900/10;
+        @apply mt-4 flex flex-col rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-white/70 transition duration-300 hover:-translate-y-0.5 hover:border-yellow-300 hover:shadow-lg hover:shadow-zinc-900/10;
+    }
+
+    .dashboard-line-section {
+        @apply mt-3;
     }
 
     .dashboard-analytics-grid {
-        @apply mt-6 grid grid-cols-1 gap-5 xl:grid-cols-3;
+        @apply mt-3 grid grid-flow-row-dense grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3;
     }
 
     .dashboard-split-grid {
-        @apply mt-6 grid grid-cols-1 gap-5 xl:grid-cols-2;
+        @apply mt-3 grid grid-flow-row-dense grid-cols-1 items-start gap-3 xl:grid-cols-2;
     }
 
     .dashboard-command-grid {
-        @apply mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr];
+        @apply mt-3 grid grid-flow-row-dense grid-cols-1 items-start gap-3 xl:grid-cols-2;
+    }
+
+    .dashboard-analytics-grid > *,
+    .dashboard-split-grid > *,
+    .dashboard-command-grid > * {
+        @apply min-w-0;
+    }
+
+    .dashboard-equal-row {
+        @apply items-stretch;
+    }
+
+    .dashboard-equal-row > *,
+    .dashboard-equal-row > .chart-card,
+    .dashboard-equal-row > .dashboard-photo-card,
+    .dashboard-equal-row > .workspace-panel {
+        @apply h-full;
+    }
+
+    .admin-metric-grid .summary-card {
+        @apply justify-between;
+    }
+
+    .admin-metric-grid .summary-trend {
+        @apply mt-auto;
+    }
+
+    .dashboard-equal-row .chart-list,
+    .dashboard-equal-row .notification-list {
+        @apply flex-1 justify-evenly;
+    }
+
+    .dashboard-equal-row .chart-row {
+        @apply min-h-14;
+    }
+
+    .dashboard-equal-row .fleet-performance-grid,
+    .dashboard-equal-row .performance-stat-grid,
+    .dashboard-equal-row .availability-map {
+        @apply flex-1 auto-rows-fr content-stretch;
+    }
+
+    .dashboard-equal-row .fleet-performance-card,
+    .dashboard-equal-row .performance-stat,
+    .dashboard-equal-row .availability-map div {
+        @apply flex min-h-20 flex-col justify-center;
+    }
+
+    .dashboard-equal-row .dashboard-photo-card {
+        @apply justify-between;
+    }
+
+    .dashboard-equal-row .dashboard-photo-card img {
+        @apply flex-1;
     }
 
     .dashboard-panel-fill {
@@ -461,25 +535,79 @@
         @apply lg:grid-cols-3;
     }
 
+    .monitor-analytics-grid {
+        @apply items-stretch xl:grid-cols-2 2xl:grid-cols-2;
+    }
+
+    .monitor-analytics-grid > *,
+    .monitor-analytics-grid > .chart-card,
+    .monitor-analytics-grid > .dashboard-photo-card {
+        @apply h-full;
+    }
+
+    .monitor-analytics-grid .chart-list,
+    .monitor-analytics-grid .compact-list,
+    .monitor-analytics-grid .driver-card-list {
+        @apply flex-1 justify-evenly;
+    }
+
+    .monitor-analytics-grid .dashboard-photo-card {
+        @apply justify-between;
+    }
+
+    .monitor-analytics-grid .dashboard-photo-card img {
+        @apply flex-1;
+    }
+
+    .driver-card-row {
+        @apply items-stretch;
+    }
+
+    .driver-card-row > *,
+    .driver-card-row > .chart-card,
+    .driver-card-row > .dashboard-photo-card,
+    .driver-card-row > .workspace-panel {
+        @apply h-full;
+    }
+
+    .driver-performance-equal-row {
+        @apply items-stretch;
+    }
+
+    .driver-performance-equal-row > *,
+    .driver-performance-equal-row > .chart-card,
+    .driver-performance-equal-row > .workspace-panel {
+        @apply h-full;
+    }
+
     .chart-card,
     .dashboard-photo-card {
-        @apply overflow-hidden rounded-2xl border border-white bg-white/95 p-5 shadow-lg shadow-zinc-900/5 ring-1 ring-zinc-200/70 transition duration-300 hover:-translate-y-1 hover:border-yellow-300 hover:shadow-2xl hover:shadow-yellow-500/10;
+        @apply flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-white/70 transition duration-300 hover:-translate-y-0.5 hover:border-yellow-300 hover:shadow-lg hover:shadow-zinc-900/10;
     }
 
     .chart-card {
-        @apply flex min-h-72 flex-col justify-between;
+        @apply flex flex-col;
+    }
+
+    .chart-card > div:first-child,
+    .workspace-panel > div:first-child:not(.admin-header) {
+        @apply rounded-xl border border-zinc-100 bg-zinc-50/70 px-3 py-2;
+    }
+
+    .dashboard-photo-card > div:last-child {
+        @apply rounded-xl border border-zinc-100 bg-zinc-50/70 px-3 py-2;
     }
 
     .line-chart-card {
-        @apply rounded-2xl border border-white bg-white/95 p-5 shadow-lg shadow-zinc-900/5 ring-1 ring-zinc-200/70 transition duration-300 hover:-translate-y-0.5 hover:border-yellow-300 hover:shadow-2xl hover:shadow-yellow-500/10;
+        @apply rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-white/70 transition duration-300 hover:-translate-y-0.5 hover:border-yellow-300 hover:shadow-lg hover:shadow-zinc-900/10;
     }
 
     .line-chart-header {
-        @apply flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between;
+        @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between;
     }
 
     .line-chart-value {
-        @apply inline-flex min-w-24 flex-col rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-right shadow-sm;
+        @apply inline-flex min-w-20 flex-col rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2 text-right shadow-sm shadow-yellow-500/10;
     }
 
     .line-chart-value strong {
@@ -491,7 +619,7 @@
     }
 
     .line-chart-viewport {
-        @apply mt-6 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-950 p-4 shadow-inner shadow-black/20;
+        @apply mt-4 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 p-3 shadow-inner shadow-black/20;
     }
 
     .line-chart-svg {
@@ -531,38 +659,42 @@
         text-anchor: start;
     }
 
-    .line-chart-data {
-        @apply mt-4 flex flex-wrap gap-2;
-    }
-
-    .line-chart-data span {
-        @apply rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-black text-zinc-600;
-    }
-
     .chart-card-feature {
-        @apply bg-gradient-to-br from-white via-white to-yellow-50/70;
+        @apply bg-white;
     }
 
     .chart-list {
-        @apply mt-6 flex flex-col gap-4;
+        @apply mt-4 flex flex-col gap-3;
     }
 
     .chart-row {
-        @apply grid grid-cols-[6.5rem_1fr_3rem] items-center gap-3 text-sm font-semibold text-zinc-700;
+        @apply grid grid-cols-[6.5rem_minmax(0,1fr)_3rem] items-center gap-3 rounded-xl border border-zinc-100 bg-white/70 px-3 py-2 text-sm font-semibold text-zinc-700 shadow-sm;
     }
 
     .chart-row strong {
         @apply text-right font-black text-zinc-950;
     }
 
+    .driver-incident-stat-card .chart-list {
+        @apply mt-3 flex-1 justify-center gap-2;
+    }
+
+    .driver-incident-stat-card .chart-row {
+        @apply grid-cols-[minmax(4.5rem,0.9fr)_minmax(0,1.3fr)_2.25rem] gap-2 px-2.5 py-1.5 text-xs sm:text-sm;
+    }
+
+    .driver-incident-stat-card .chart-row span {
+        @apply min-w-0 truncate;
+    }
+
     .dashboard-meter,
     .score-gauge {
-        @apply h-3 w-full overflow-hidden rounded-full bg-zinc-100 shadow-inner;
+        @apply h-2.5 w-full overflow-hidden rounded-full bg-zinc-100 shadow-inner shadow-zinc-900/10;
     }
 
     .dashboard-meter::-webkit-meter-bar,
     .score-gauge::-webkit-meter-bar {
-        @apply h-3 rounded-full border-0 bg-zinc-100;
+        @apply h-2.5 rounded-full border-0 bg-zinc-100;
     }
 
     .dashboard-meter::-webkit-meter-optimum-value,
@@ -602,51 +734,63 @@
     }
 
     .score-card {
-        @apply bg-zinc-950 text-white;
+        @apply border-zinc-200 bg-white text-zinc-950 ring-white/70;
     }
 
     .score-card .section-title {
-        @apply text-white;
+        @apply text-zinc-950;
     }
 
     .score-gauge-wrap {
-        @apply mt-6 rounded-xl border border-yellow-300/25 bg-white/[0.06] p-5;
+        @apply mt-4 rounded-xl border border-zinc-100 bg-zinc-50/70 p-3 shadow-sm shadow-zinc-900/5;
+    }
+
+    .driver-card-row .score-gauge-wrap {
+        @apply flex flex-1 flex-col justify-center;
     }
 
     .score-gauge {
-        @apply h-5;
+        @apply h-3;
     }
 
     .score-gauge::-webkit-meter-bar {
-        @apply h-5 bg-zinc-800;
+        @apply h-3 bg-zinc-100;
     }
 
     .score-gauge-value {
-        @apply mt-5 flex items-end justify-between gap-4;
+        @apply mt-4 flex items-end justify-between gap-3;
     }
 
     .score-gauge-value strong {
-        @apply text-5xl font-black text-yellow-300;
+        @apply text-4xl font-black text-zinc-950;
     }
 
     .score-gauge-value span {
-        @apply pb-2 text-sm font-semibold text-zinc-300;
+        @apply pb-2 text-sm font-semibold text-zinc-500;
     }
 
     .dashboard-photo-card {
-        @apply relative flex min-h-72 flex-col justify-between gap-5 bg-zinc-950 text-white;
+        @apply relative gap-4 border-zinc-200 bg-white text-zinc-950 ring-white/70;
     }
 
     .dashboard-photo-card img {
-        @apply aspect-video w-full rounded-xl border border-yellow-300/25 object-cover shadow-xl shadow-black/30 transition duration-500 hover:scale-[1.02];
+        @apply aspect-video w-full rounded-xl border border-zinc-200 object-cover shadow-sm shadow-zinc-900/5 transition duration-500 hover:scale-[1.01];
     }
 
     .dashboard-photo-card .section-title {
-        @apply text-white;
+        @apply text-zinc-950;
     }
 
     .dashboard-photo-card .section-copy {
-        @apply mt-3 text-zinc-300;
+        @apply mt-2 text-zinc-600;
+    }
+
+    .driver-overview-photo-card {
+        @apply gap-3 p-4 xl:grid xl:grid-cols-[minmax(0,1.25fr)_minmax(16rem,0.75fr)] xl:items-center;
+    }
+
+    .driver-overview-photo-card img {
+        @apply xl:h-44 xl:aspect-auto;
     }
 
     .performance-hero {
@@ -671,6 +815,14 @@
 
     .performance-stat-grid-tight {
         @apply grid-cols-1 gap-3 sm:grid-cols-2;
+    }
+
+    .performance-status-card .chart-list {
+        @apply flex-1 justify-evenly gap-4;
+    }
+
+    .performance-status-card .chart-row {
+        @apply min-h-16 px-4 py-3;
     }
 
     .performance-stat-dark {
@@ -730,20 +882,20 @@
     .compact-list,
     .driver-card-list,
     .score-guide {
-        @apply mt-5 flex flex-col gap-3;
+        @apply mt-3 flex flex-col gap-2;
     }
 
     .fleet-performance-grid {
-        @apply mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2;
+        @apply mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2;
     }
 
     .fleet-performance-card,
     .performance-stat {
-        @apply rounded-xl border border-zinc-200 bg-zinc-50/80 p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-yellow-300 hover:bg-yellow-50;
+        @apply rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 shadow-sm shadow-zinc-900/5 transition duration-200 hover:-translate-y-0.5 hover:border-yellow-300 hover:bg-yellow-50 hover:shadow-lg hover:shadow-yellow-500/10;
     }
 
     .fleet-performance-card {
-        @apply flex items-center justify-between gap-4;
+        @apply flex items-center justify-between gap-3 p-3;
     }
 
     .fleet-performance-card span,
@@ -755,23 +907,31 @@
     .fleet-performance-card strong,
     .performance-stat strong,
     .availability-map strong {
-        @apply mt-1 block text-3xl font-black text-zinc-950;
+        @apply mt-1 block text-2xl font-black leading-none text-zinc-950;
     }
 
     .performance-stat-grid {
-        @apply mt-5 grid grid-cols-1 gap-4 md:grid-cols-3;
+        @apply mt-3 grid grid-cols-1 gap-3 md:grid-cols-3;
+    }
+
+    .driver-progress-panel .performance-stat-grid {
+        @apply items-stretch;
+    }
+
+    .driver-progress-panel .performance-stat {
+        @apply flex flex-col justify-between;
     }
 
     .performance-stat small {
-        @apply mt-2 block text-sm font-semibold leading-6 text-zinc-600;
+        @apply mt-1 block text-sm font-semibold leading-5 text-zinc-600;
     }
 
     .notification-list {
-        @apply mt-5 flex flex-col gap-3;
+        @apply mt-3 flex flex-col gap-2;
     }
 
     .notification-item {
-        @apply grid grid-cols-[auto_1fr_auto] items-start gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition duration-200 hover:border-yellow-300 hover:bg-yellow-50;
+        @apply grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm shadow-zinc-900/5 transition duration-200 hover:-translate-y-0.5 hover:border-yellow-300 hover:bg-yellow-50 hover:shadow-lg hover:shadow-yellow-500/10;
     }
 
     .notification-dot {
@@ -783,23 +943,35 @@
     }
 
     .notification-item small {
-        @apply mt-1 block text-sm font-semibold leading-6 text-zinc-600;
+        @apply mt-1 block text-sm font-semibold leading-5 text-zinc-600;
     }
 
     .live-monitor-grid {
-        @apply grid grid-cols-1 gap-5 xl:grid-cols-[1fr_20rem];
+        @apply mt-3 grid w-full grid-cols-1 items-stretch gap-3 xl:grid-cols-[minmax(0,1fr)_16rem];
+    }
+
+    .live-monitor-panel .admin-header {
+        @apply rounded-xl border border-zinc-100 bg-zinc-50/80 p-3 gap-3 sm:items-center;
+    }
+
+    .live-monitor-panel .workspace-link {
+        @apply shrink-0 self-start rounded-xl px-3 py-2 sm:self-center;
     }
 
     .activity-feed {
-        @apply flex flex-col gap-3;
+        @apply flex min-w-0 flex-col gap-2;
     }
 
     .activity-feed-item {
-        @apply grid grid-cols-[auto_1fr_auto] items-center gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-left no-underline shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-yellow-300 hover:bg-yellow-50 hover:shadow-lg;
+        @apply grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 text-left no-underline shadow-sm shadow-zinc-900/5 transition duration-200 hover:-translate-y-0.5 hover:border-yellow-300 hover:bg-yellow-50 hover:shadow-lg hover:shadow-yellow-500/10;
+    }
+
+    .activity-feed-content {
+        @apply min-w-0 overflow-hidden;
     }
 
     .activity-marker {
-        @apply size-3 rounded-full border-2 border-zinc-950 bg-yellow-300 shadow-lg shadow-yellow-400/40;
+        @apply size-3 rounded-full border-2 border-white bg-yellow-300 shadow-lg shadow-yellow-400/40 ring-2 ring-zinc-950;
     }
 
     .activity-feed-item strong {
@@ -811,33 +983,41 @@
     }
 
     .resolution-card {
-        @apply flex min-h-64 flex-col justify-end rounded-2xl border border-yellow-300/30 bg-zinc-950 p-5 text-white shadow-xl shadow-zinc-900/20;
+        @apply flex h-full flex-col justify-between rounded-xl border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm shadow-zinc-900/5;
     }
 
     .resolution-card-light {
-        @apply mt-5 min-h-0 bg-zinc-950;
+        @apply mt-4 min-h-0 bg-zinc-50/70;
     }
 
     .resolution-card h3 {
-        @apply mt-4 text-6xl font-black tracking-tight text-yellow-300;
+        @apply mt-2 text-5xl font-black tracking-tight text-zinc-950;
     }
 
     .resolution-card span {
-        @apply mb-5 mt-2 block text-sm font-semibold leading-6 text-zinc-300;
+        @apply mb-4 mt-1 block text-sm font-semibold leading-5 text-zinc-600;
     }
 
     .availability-map {
-        @apply mt-5 grid grid-cols-2 gap-3;
+        @apply mt-3 grid grid-cols-2 gap-2;
+    }
+
+    .admin-availability-panel .availability-map {
+        @apply flex-1 auto-rows-fr content-stretch;
     }
 
     .availability-map div {
-        @apply min-h-28 rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm transition hover:border-yellow-300 hover:bg-yellow-50;
+        @apply rounded-xl border border-zinc-200 bg-zinc-50 p-3 shadow-sm shadow-zinc-900/5 transition hover:-translate-y-0.5 hover:border-yellow-300 hover:bg-yellow-50 hover:shadow-lg hover:shadow-yellow-500/10;
+    }
+
+    .admin-availability-panel .availability-map div {
+        @apply flex min-h-24 flex-col justify-center;
     }
 
     .health-item,
     .compact-list-item,
     .driver-mini-card {
-        @apply flex items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-yellow-300 hover:bg-yellow-50 hover:shadow-lg;
+        @apply flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 shadow-sm shadow-zinc-900/5 transition duration-200 hover:-translate-y-0.5 hover:border-yellow-300 hover:bg-yellow-50 hover:shadow-lg hover:shadow-yellow-500/10;
     }
 
     .health-item span,
@@ -871,7 +1051,7 @@
     }
 
     .driver-mini-card b {
-        @apply flex size-12 shrink-0 items-center justify-center rounded-full bg-zinc-950 text-lg font-black text-yellow-300;
+        @apply flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-950 text-base font-black text-yellow-300;
     }
 
     .score-guide {
@@ -879,7 +1059,7 @@
     }
 
     .score-guide div {
-        @apply rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm transition hover:border-yellow-300 hover:bg-yellow-50;
+        @apply rounded-xl border border-zinc-200 bg-zinc-50 p-3 shadow-sm shadow-zinc-900/5 transition hover:-translate-y-0.5 hover:border-yellow-300 hover:bg-yellow-50 hover:shadow-lg hover:shadow-yellow-500/10;
     }
 
     .score-guide span {
@@ -887,7 +1067,7 @@
     }
 
     .score-guide strong {
-        @apply mt-2 block text-sm font-black text-zinc-950;
+        @apply mt-1 block text-sm font-black text-zinc-950;
     }
 
     .empty-state {
@@ -915,11 +1095,27 @@
     }
 
     .quick-action-grid {
-        @apply mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-5;
+        @apply mt-3 grid grid-flow-row-dense grid-cols-1 items-start gap-3 md:grid-cols-2 2xl:grid-cols-5;
+    }
+
+    .admin-quick-actions-panel .quick-action-grid {
+        @apply items-stretch lg:grid-cols-5;
+    }
+
+    .quick-action-grid > * {
+        @apply min-w-0;
     }
 
     .quick-action-card {
-        @apply relative flex min-h-44 flex-col gap-5 overflow-hidden rounded-2xl border border-white bg-white p-5 text-left no-underline shadow-lg shadow-zinc-900/5 ring-1 ring-zinc-200/70 transition duration-300 hover:-translate-y-1 hover:border-yellow-300 hover:bg-yellow-50 hover:shadow-2xl hover:shadow-yellow-500/10 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-offset-2;
+        @apply relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 text-left no-underline shadow-sm shadow-zinc-900/5 ring-1 ring-white/70 transition duration-300 hover:-translate-y-0.5 hover:border-yellow-300 hover:bg-yellow-50 hover:shadow-lg hover:shadow-zinc-900/10 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-offset-2;
+    }
+
+    .admin-quick-actions-panel .quick-action-card {
+        @apply h-full justify-between;
+    }
+
+    .admin-quick-actions-panel .quick-action-content {
+        @apply flex-1 justify-center;
     }
 
     .quick-action-card::before {
@@ -927,13 +1123,8 @@
         content: '';
     }
 
-    .quick-action-card::after {
-        @apply pointer-events-none absolute -right-12 -top-12 size-28 rounded-full bg-yellow-300/20 transition duration-200 group-hover:scale-125 group-hover:bg-yellow-300/30;
-        content: '';
-    }
-
     .quick-action-icon {
-        @apply relative z-10 flex size-12 items-center justify-center rounded-lg bg-zinc-950 text-yellow-300 shadow-lg shadow-yellow-500/10 transition duration-200 group-hover:bg-yellow-300 group-hover:text-zinc-950;
+        @apply relative z-10 flex size-10 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-950 text-yellow-300 shadow-sm shadow-zinc-900/5 transition duration-200 group-hover:bg-yellow-300 group-hover:text-zinc-950 group-hover:shadow-yellow-300/20;
     }
 
     .quick-action-icon svg {
@@ -945,7 +1136,7 @@
     }
 
     .quick-action-content {
-        @apply relative z-10 flex flex-1 flex-col gap-2;
+        @apply relative z-10 flex flex-col gap-2;
     }
 
     .quick-action-content strong {
@@ -953,11 +1144,15 @@
     }
 
     .quick-action-content small {
-        @apply text-sm font-semibold leading-6 text-zinc-600;
+        @apply text-sm font-semibold leading-5 text-zinc-600;
     }
 
     .quick-action-meta {
-        @apply relative z-10 inline-flex w-fit items-center gap-2 rounded-md border border-zinc-200 bg-zinc-950 px-3 py-2 text-xs font-black uppercase tracking-wide text-yellow-300 transition duration-200 group-hover:border-yellow-300 group-hover:bg-yellow-300 group-hover:text-zinc-950;
+        @apply relative z-10 inline-flex w-fit items-center gap-2 rounded-md border border-zinc-200 bg-zinc-950 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-yellow-300 transition duration-200 group-hover:border-yellow-300 group-hover:bg-yellow-300 group-hover:text-zinc-950;
+    }
+
+    .admin-quick-actions-panel .quick-action-meta {
+        @apply mt-auto;
     }
 
     .quick-action-meta::after {
@@ -968,12 +1163,28 @@
         @apply 2xl:grid-cols-2;
     }
 
+    .driver-quick-actions-panel .quick-action-grid {
+        @apply items-stretch;
+    }
+
+    .driver-quick-actions-panel .quick-action-card {
+        @apply h-full justify-between;
+    }
+
+    .driver-quick-actions-panel .quick-action-meta {
+        @apply mt-auto;
+    }
+
     .section-title {
         @apply mt-1 text-xl font-black tracking-tight text-zinc-950;
     }
 
     .section-copy {
         @apply mt-4 max-w-2xl text-sm leading-6 text-zinc-600;
+    }
+
+    .safety-scores-copy {
+        @apply mb-3 mt-2;
     }
 
     .onboarding-notice {
@@ -1066,15 +1277,19 @@
     }
 
     .admin-table {
-        @apply min-w-full divide-y divide-zinc-200 text-left text-sm;
+        @apply min-w-full table-fixed divide-y divide-zinc-200 text-left text-xs xl:text-sm;
     }
 
     .admin-table th {
-        @apply bg-zinc-950 px-4 py-4 text-xs font-black uppercase tracking-wide text-yellow-300;
+        @apply break-words bg-zinc-950 px-2 py-3 text-[0.68rem] font-black uppercase tracking-wide text-yellow-300 xl:px-3 xl:text-xs;
     }
 
     .admin-table td {
-        @apply whitespace-nowrap px-4 py-3 align-middle text-zinc-700;
+        @apply whitespace-normal break-words px-2 py-2 align-top leading-5 text-zinc-700 xl:px-3;
+    }
+
+    .admin-table td a {
+        @apply break-words;
     }
 
     .admin-table tbody {
@@ -1098,7 +1313,7 @@
     }
 
     .inline-actions {
-        @apply flex flex-nowrap items-center gap-1.5 text-sm font-black;
+        @apply flex flex-wrap items-center gap-1.5 text-xs font-black xl:text-sm;
     }
 
     .inline-actions form {
@@ -1134,11 +1349,11 @@
     }
 
     .table-compact-text {
-        @apply block max-w-48 truncate font-semibold text-zinc-800;
+        @apply block max-w-full truncate font-semibold text-zinc-800;
     }
 
     .vehicle-summary {
-        @apply relative inline-flex max-w-64 cursor-default items-center gap-1 rounded-md text-sm font-semibold text-zinc-700 outline-none focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:ring-offset-2;
+        @apply relative inline-flex max-w-full cursor-default items-center gap-1 rounded-md text-sm font-semibold text-zinc-700 outline-none focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:ring-offset-2;
     }
 
     .vehicle-summary:hover,
@@ -1216,7 +1431,7 @@
     }
 
     .status-badge {
-        @apply inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-black capitalize;
+        @apply inline-flex whitespace-nowrap items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-black capitalize;
     }
 
     .status-badge::before {

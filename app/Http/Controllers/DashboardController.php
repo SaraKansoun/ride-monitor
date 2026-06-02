@@ -41,7 +41,6 @@ class DashboardController extends Controller
     public function admin(): View
     {
         $activeUsers = User::query()->active()->count();
-        $inactiveUsers = User::query()->inactive()->count();
         $activeDrivers = Driver::query()->active()->count();
         $activeVehicles = Vehicle::query()->active()->count();
         $activeIncidents = Incident::query()->active()->count();
@@ -61,10 +60,6 @@ class DashboardController extends Controller
                 [
                     'label' => 'Total active users',
                     'value' => $activeUsers,
-                ],
-                [
-                    'label' => 'Total inactive users',
-                    'value' => $inactiveUsers,
                 ],
                 [
                     'label' => 'Total active drivers',

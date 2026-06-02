@@ -11,7 +11,9 @@
         'processing' => 'Processing',
         'ai_analyzing' => 'AI analyzing',
         'uploading' => 'Uploading',
-        default => str_replace('_', ' ', $statusValue),
+        default => in_array($statusValue, \App\Models\IncidentReview::FAULT_DECISIONS, true)
+            ? \App\Models\IncidentReview::faultDecisionLabel($statusValue)
+            : ucfirst(str_replace('_', ' ', $statusValue)),
     };
 @endphp
 

@@ -222,7 +222,7 @@ class IncidentController extends Controller
             'confidence_score' => $aiAnalysis->confidence_score,
             'recommendation' => $aiAnalysis->recommendation,
             'suggested_fault_decision' => $aiAnalysis->suggested_fault_decision,
-            'suggested_fault_label' => $this->suggestedFaultLabel($aiAnalysis->suggested_fault_decision),
+            'suggested_fault_label' => $this->suggestedFaultLabel($aiAnalysis),
             'fault_confidence_score' => $aiAnalysis->fault_confidence_score,
             'fault_reasoning' => $aiAnalysis->fault_reasoning,
             'error_message' => data_get($aiAnalysis->raw_response, 'error.message'),
@@ -379,15 +379,9 @@ class IncidentController extends Controller
         };
     }
 
-    private function suggestedFaultLabel(?string $suggestedFaultDecision): string
+    private function suggestedFaultLabel(AIAnalysis $aiAnalysis): string
     {
-        return match ($suggestedFaultDecision) {
-            IncidentReview::FAULT_DRIVER => 'Possible driver fault',
-            IncidentReview::FAULT_OTHER_PARTY => 'Possible other party fault',
-            IncidentReview::FAULT_SHARED => 'Possible shared fault',
-            IncidentReview::FAULT_UNCLEAR => 'Unclear',
-            default => 'Pending',
-        };
+        return IncidentReview::faultDecisionLabel($aiAnalysis->suggested_fault_decision);
     }
 
     /**

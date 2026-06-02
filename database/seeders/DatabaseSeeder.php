@@ -22,11 +22,13 @@ class DatabaseSeeder extends Seeder
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         collect(PermissionCatalog::permissions())->each(
-            fn (string $permission) => Permission::findOrCreate($permission)
+            fn (string $permission) => Permission::findOrCreate($permission, 'web')
         );
 
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         collect(PermissionCatalog::rolePermissions())->each(
-            fn (array $permissions, string $role) => Role::findOrCreate($role)->syncPermissions($permissions)
+            fn (array $permissions, string $role) => Role::findOrCreate($role, 'web')->syncPermissions($permissions)
         );
 
         $users = [
@@ -46,6 +48,10 @@ class DatabaseSeeder extends Seeder
             );
 
             $user->syncRoles($userData['role']);
+        }
+
+        if (app()->environment(['local', 'testing'])) {
+            $this->call(DemoDataSeeder::class);
         }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();

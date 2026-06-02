@@ -117,6 +117,27 @@ class DriverScoreService
         return $points;
     }
 
+    public function penaltyForDecision(string $faultDecision, string $incidentType): int
+    {
+        $penalty = match (true) {
+            $faultDecision === IncidentReview::FAULT_DRIVER
+                && $incidentType === Incident::TYPE_CRASH => 20,
+            $faultDecision === IncidentReview::FAULT_SHARED
+                && $incidentType === Incident::TYPE_CRASH => 10,
+            default => 0,
+        };
+
+        if ($incidentType === Incident::TYPE_UNSAFE_DRIVING) {
+            $penalty += 10;
+        }
+
+        if ($incidentType === Incident::TYPE_COMPLAINT) {
+            $penalty += 5;
+        }
+
+        return $penalty;
+    }
+
     private function penaltyForReview(IncidentReview $review): int
     {
         $incident = $review->incident;
@@ -125,22 +146,6 @@ class DriverScoreService
             return 0;
         }
 
-        $penalty = match (true) {
-            $review->fault_decision === IncidentReview::FAULT_DRIVER
-                && $incident->type === Incident::TYPE_CRASH => 20,
-            $review->fault_decision === IncidentReview::FAULT_SHARED
-                && $incident->type === Incident::TYPE_CRASH => 10,
-            default => 0,
-        };
-
-        if ($incident->type === Incident::TYPE_UNSAFE_DRIVING) {
-            $penalty += 10;
-        }
-
-        if ($incident->type === Incident::TYPE_COMPLAINT) {
-            $penalty += 5;
-        }
-
-        return $penalty;
+        return $this->penaltyForDecision($review->fault_decision, $incident->type);
     }
 }

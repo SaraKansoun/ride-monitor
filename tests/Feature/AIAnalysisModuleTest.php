@@ -442,8 +442,8 @@ test('demo dashcam mode creates incident and queues analysis when enabled', func
         ->get(route('incident-reviews.index', ['tab' => 'ai']))
         ->assertSuccessful()
         ->assertSeeText('AI Processing')
-        ->assertSeeText('Analyze a sample dashcam video')
-        ->assertSeeText('sample-dashcam.mp4');
+        ->assertDontSeeText('Analyze a sample dashcam video')
+        ->assertDontSeeText('sample-dashcam.mp4');
 
     $this->actingAs($admin)
         ->post(route('ai-analyses.demo.store'), [
@@ -518,11 +518,144 @@ test('owning driver can see ai analysis on incident detail and another driver is
         ->assertSeeText('AI analysis')
         ->assertSeeText('AI suggested fault')
         ->assertSeeText('Unclear')
+        ->assertSeeText('Fault confidence')
+        ->assertSeeText('0.42')
         ->assertSeeText('AI observations are advisory only');
 
     $this->actingAs($otherDriverUser)
         ->get(route('incidents.show', $incident))
         ->assertForbidden();
+});
+
+test('monitor review dropdown shows score impact for every fault decision', function () {
+    $monitor = createUserWithRole('monitor');
+    [$driverUser, $driver] = createAiAnalysisDriverContext();
+    $incident = Incident::factory()->create([
+        'driver_id' => $driver->id,
+        'reported_by' => $driverUser->id,
+        'description' => 'Dropdown AI suggestion score incident.',
+        'type' => Incident::TYPE_CRASH,
+        'status' => Incident::STATUS_PENDING,
+    ]);
+    $analysis = AIAnalysis::factory()->completed()->create(['incident_id' => $incident->id]);
+
+    $this->actingAs($monitor)
+        ->get(route('incidents.show', $incident))
+        ->assertSuccessful()
+        ->assertSee('<select name="fault_decision" required>', false)
+        ->assertSeeText('Driver fault (-20)')
+        ->assertSeeText('Other party fault (0)')
+        ->assertSeeText('Shared fault (-10)')
+        ->assertSeeText('Unclear (0)')
+        ->assertDontSeeText('Unclear (0.42)');
+
+    $this->actingAs($monitor)
+        ->getJson(route('incidents.ai-analysis.status', $incident))
+        ->assertSuccessful()
+        ->assertJsonPath('suggested_fault_label', 'Unclear')
+        ->assertJsonPath('fault_confidence_score', $analysis->fault_confidence_score);
+});
+
+test('monitor review dropdown uses score impact even when ai fault confidence is missing', function () {
+    $monitor = createUserWithRole('monitor');
+    [$driverUser, $driver] = createAiAnalysisDriverContext();
+    $incident = Incident::factory()->create([
+        'driver_id' => $driver->id,
+        'reported_by' => $driverUser->id,
+        'description' => 'Missing dropdown AI suggestion score incident.',
+        'type' => Incident::TYPE_CRASH,
+        'status' => Incident::STATUS_PENDING,
+    ]);
+    AIAnalysis::factory()->completed()->create([
+        'incident_id' => $incident->id,
+        'suggested_fault_decision' => IncidentReview::FAULT_DRIVER,
+        'fault_confidence_score' => null,
+    ]);
+
+    $this->actingAs($monitor)
+        ->get(route('incidents.show', $incident))
+        ->assertSuccessful()
+        ->assertSeeText('Fault confidence')
+        ->assertSeeText('Pending')
+        ->assertSeeText('Driver fault (-20)')
+        ->assertSeeText('Shared fault (-10)');
+});
+
+test('monitor final review form defaults to active ai suggestion and reasoning', function () {
+    $monitor = createUserWithRole('monitor');
+    [$driverUser, $driver] = createAiAnalysisDriverContext();
+    $incident = Incident::factory()->create([
+        'driver_id' => $driver->id,
+        'reported_by' => $driverUser->id,
+        'description' => 'Autofill AI suggestion review incident.',
+        'type' => Incident::TYPE_CRASH,
+        'status' => Incident::STATUS_PENDING,
+    ]);
+    AIAnalysis::factory()->completed()->create([
+        'incident_id' => $incident->id,
+        'suggested_fault_decision' => IncidentReview::FAULT_SHARED,
+        'fault_reasoning' => 'AI reasoning suggests shared responsibility, pending human confirmation.',
+    ]);
+
+    $this->actingAs($monitor)
+        ->get(route('incidents.show', $incident))
+        ->assertSuccessful()
+        ->assertSee('<option value="shared_fault" selected>Shared fault (-10)</option>', false)
+        ->assertSee('AI reasoning suggests shared responsibility, pending human confirmation.');
+});
+
+test('monitor final review form falls back to ai summary when reasoning is missing', function () {
+    $monitor = createUserWithRole('monitor');
+    [$driverUser, $driver] = createAiAnalysisDriverContext();
+    $incident = Incident::factory()->create([
+        'driver_id' => $driver->id,
+        'reported_by' => $driverUser->id,
+        'description' => 'Autofill AI summary review incident.',
+        'type' => Incident::TYPE_CRASH,
+        'status' => Incident::STATUS_PENDING,
+    ]);
+    AIAnalysis::factory()->completed()->create([
+        'incident_id' => $incident->id,
+        'fault_reasoning' => null,
+        'summary' => 'AI summary fallback for the monitor review notes.',
+    ]);
+
+    $this->actingAs($monitor)
+        ->get(route('incidents.show', $incident))
+        ->assertSuccessful()
+        ->assertSee('AI summary fallback for the monitor review notes.');
+});
+
+test('monitor final review form keeps old input over ai defaults after validation error', function () {
+    $monitor = createUserWithRole('monitor');
+    [$driverUser, $driver] = createAiAnalysisDriverContext();
+    $incident = Incident::factory()->create([
+        'driver_id' => $driver->id,
+        'reported_by' => $driverUser->id,
+        'description' => 'Autofill old input review incident.',
+        'type' => Incident::TYPE_CRASH,
+        'status' => Incident::STATUS_PENDING,
+    ]);
+    AIAnalysis::factory()->completed()->create([
+        'incident_id' => $incident->id,
+        'suggested_fault_decision' => IncidentReview::FAULT_SHARED,
+        'fault_reasoning' => 'AI default reasoning should not overwrite old input.',
+    ]);
+
+    $this->actingAs($monitor)
+        ->from(route('incidents.show', $incident))
+        ->post(route('incidents.reviews.store', $incident), [
+            'fault_decision' => IncidentReview::FAULT_DRIVER,
+            'notes' => '',
+        ])
+        ->assertRedirect(route('incidents.show', $incident));
+
+    $this->actingAs($monitor)
+        ->get(route('incidents.show', $incident))
+        ->assertSuccessful()
+        ->assertSee('<option value="driver_fault" selected>Driver fault (-20)</option>', false)
+        ->assertDontSee('<option value="shared_fault" selected>Shared fault (-10)</option>', false)
+        ->assertSee('<textarea name="notes" required></textarea>', false);
 });
 
 test('ai analysis status endpoint is authorized through incident ownership', function () {

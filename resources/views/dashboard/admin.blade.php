@@ -18,6 +18,10 @@
         $incidentMax = max($activeIncidents, $pendingIncidents, $resolvedIncidents, 1);
         $fleetMax = max($activeUsers, $inactiveUsers, $activeDrivers, $activeVehicles, 1);
         $fleetImage = 'https://images.unsplash.com/photo-1758950497906-630b76200a3b?auto=format&fit=crop&w=1400&q=80';
+        $hasIncidentTrend = collect($incidentTrendPoints)->contains(fn (array $point): bool => (int) ($point['value'] ?? 0) > 0);
+        $visibleNotificationItems = collect($notificationItems)
+            ->reject(fn (array $item): bool => ($item['status'] ?? null) === 'completed')
+            ->values();
         $quickActions = [
             [
                 'label' => 'Manage users',
@@ -84,11 +88,11 @@
         </div>
     </section>
 
-    <section class="dashboard-grid">
+    <section class="dashboard-grid admin-metric-grid">
         @foreach ($metrics as $metric)
             @php
                 $cardIcon = match ($metric['label']) {
-                    'total active users', 'Total active users', 'total inactive users', 'Total inactive users' => 'users',
+                    'total active users', 'Total active users' => 'users',
                     'total active drivers', 'Total active drivers' => 'drivers',
                     'total active vehicles', 'Total active vehicles' => 'vehicles',
                     'total active incidents', 'Total active incidents' => 'incidents',
@@ -106,18 +110,20 @@
         @endforeach
     </section>
 
-    <section class="dashboard-analytics-grid">
-        <x-line-chart
-            class="xl:col-span-3"
-            title="Incidents Over Time"
-            kicker="Trend analytics"
-            copy="Active incident reports created during the last 14 days."
-            :points="$incidentTrendPoints"
-            empty="No active incidents were reported in the last 14 days."
-        />
-    </section>
+    @if ($hasIncidentTrend)
+        <section class="dashboard-line-section">
+            <x-line-chart
+                class="xl:col-span-3"
+                title="Incidents Over Time"
+                kicker="Trend analytics"
+                copy="Active incident reports created during the last 14 days."
+                :points="$incidentTrendPoints"
+                empty="No active incidents were reported in the last 14 days."
+            />
+        </section>
+    @endif
 
-    <section class="dashboard-analytics-grid">
+    <section class="dashboard-analytics-grid dashboard-equal-row">
         <article class="chart-card chart-card-feature">
             <div>
                 <p class="app-kicker">Incident statistics</p>
@@ -183,7 +189,7 @@
         </article>
     </section>
 
-    <section class="dashboard-command-grid">
+    <section class="dashboard-command-grid dashboard-equal-row">
         <article class="workspace-panel dashboard-panel-fill">
             <div>
                 <p class="app-kicker">Fleet health</p>
@@ -203,65 +209,64 @@
             </div>
         </article>
 
-        <article class="workspace-panel dashboard-panel-fill">
-            <div>
-                <p class="app-kicker">Notifications</p>
-                <h2 class="section-title">Operational signals</h2>
-            </div>
+        @if ($visibleNotificationItems->isNotEmpty())
+            <article class="workspace-panel dashboard-panel-fill">
+                <div>
+                    <p class="app-kicker">Notifications</p>
+                    <h2 class="section-title">Operational signals</h2>
+                </div>
 
-            <div class="notification-list">
-                @foreach ($notificationItems as $item)
-                    <div class="notification-item">
-                        <span class="notification-dot"></span>
-                        <div>
-                            <strong>{{ $item['title'] }}</strong>
-                            <small>{{ $item['copy'] }}</small>
+                <div class="notification-list">
+                    @foreach ($visibleNotificationItems as $item)
+                        <div class="notification-item">
+                            <span class="notification-dot"></span>
+                            <div>
+                                <strong>{{ $item['title'] }}</strong>
+                                <small>{{ $item['copy'] }}</small>
+                            </div>
+                            <x-status-badge :status="$item['status']" />
                         </div>
-                        <x-status-badge :status="$item['status']" />
-                    </div>
-                @endforeach
-            </div>
-        </article>
+                    @endforeach
+                </div>
+            </article>
+        @endif
     </section>
 
-    <section class="workspace-panel">
-        <div class="admin-header">
-            <div>
-                <p class="app-kicker">Live monitoring</p>
-                <h2 class="section-title">Latest active incidents</h2>
-            </div>
-            <a class="workspace-link" href="{{ route('incidents.index') }}">Open incidents</a>
-        </div>
-
-        <div class="live-monitor-grid">
-            <div class="activity-feed">
-                @forelse ($recentIncidents as $incident)
-                    <a class="activity-feed-item" href="{{ route('incidents.show', $incident) }}">
-                        <span class="activity-marker"></span>
-                        <span>
-                            <strong>{{ $incident->description }}</strong>
-                            <small>{{ $incident->driver?->user?->name ?? 'Unassigned driver' }} - {{ $incident->vehicle?->plate_number ?? 'No vehicle' }}</small>
-                        </span>
-                        <x-status-badge :status="$incident->status" />
-                    </a>
-                @empty
-                    <div class="empty-state">
-                        <strong>No active incidents yet.</strong>
-                        <span>New reports will appear here as soon as drivers submit them.</span>
-                    </div>
-                @endforelse
+    @if ($recentIncidents->isNotEmpty())
+        <section class="workspace-panel live-monitor-panel">
+            <div class="admin-header">
+                <div>
+                    <p class="app-kicker">Live monitoring</p>
+                    <h2 class="section-title">Latest active incidents</h2>
+                </div>
+                <a class="workspace-link" href="{{ route('incidents.index') }}">Open incidents</a>
             </div>
 
-            <div class="resolution-card">
-                <p class="app-kicker">Resolution analytics</p>
-                <h3>{{ $resolutionRate }}%</h3>
-                <span>Current active incident resolution rate</span>
-                <meter class="score-gauge" min="0" max="100" value="{{ $resolutionRate }}">{{ $resolutionRate }}%</meter>
-            </div>
-        </div>
-    </section>
+            <div class="live-monitor-grid">
+                <div class="activity-feed">
+                    @foreach ($recentIncidents as $incident)
+                        <a class="activity-feed-item" href="{{ route('incidents.show', $incident) }}">
+                            <span class="activity-marker"></span>
+                            <span class="activity-feed-content">
+                                <strong>{{ $incident->description }}</strong>
+                                <small>{{ $incident->driver?->user?->name ?? 'Unassigned driver' }} - {{ $incident->vehicle?->plate_number ?? 'No vehicle' }}</small>
+                            </span>
+                            <x-status-badge :status="$incident->status" />
+                        </a>
+                    @endforeach
+                </div>
 
-    <section class="dashboard-split-grid">
+                <div class="resolution-card">
+                    <p class="app-kicker">Resolution analytics</p>
+                    <h3>{{ $resolutionRate }}%</h3>
+                    <span>Current active incident resolution rate</span>
+                    <meter class="score-gauge" min="0" max="100" value="{{ $resolutionRate }}">{{ $resolutionRate }}%</meter>
+                </div>
+            </div>
+        </section>
+    @endif
+
+    <section class="dashboard-split-grid dashboard-equal-row">
         <article class="workspace-panel dashboard-panel-fill">
             <div>
                 <p class="app-kicker">Performance analytics</p>
@@ -287,7 +292,7 @@
             </div>
         </article>
 
-        <article class="workspace-panel dashboard-panel-fill">
+        <article class="workspace-panel dashboard-panel-fill admin-availability-panel">
             <div>
                 <p class="app-kicker">Driver availability</p>
                 <h2 class="section-title">Active operations overview</h2>
@@ -314,13 +319,11 @@
         </article>
     </section>
 
-    <section class="workspace-panel quick-actions-panel">
+    <section class="workspace-panel quick-actions-panel admin-quick-actions-panel">
         <div>
             <p class="app-kicker">Quick actions</p>
             <h2 class="section-title">Manage the system</h2>
         </div>
-
-        <p class="section-copy">Jump into the core modules used most often during a fleet safety presentation or daily operations review.</p>
 
         <div class="quick-action-grid">
             @foreach ($quickActions as $action)

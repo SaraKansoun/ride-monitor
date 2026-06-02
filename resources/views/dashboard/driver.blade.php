@@ -13,6 +13,9 @@
         $incidentMax = max($activeIncidents, $resolvedIncidents, $pendingIncidents, 1);
         $driverImage = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=1400&q=80';
         $scoreBand = $scoreValue >= 80 ? 'Strong performance' : ($scoreValue >= 50 ? 'Needs attention' : 'High risk');
+        $visibleNotificationItems = collect($notificationItems)
+            ->reject(fn (array $item): bool => ($item['status'] ?? null) === 'completed')
+            ->values();
         $driverActions = [
             [
                 'label' => 'Report incident',
@@ -63,7 +66,7 @@
         </div>
     </section>
 
-    <section class="dashboard-grid">
+    <section class="dashboard-grid driver-metric-grid">
         @foreach ($metrics as $metric)
             @php
                 $cardIcon = match ($metric['label']) {
@@ -83,7 +86,7 @@
         @endforeach
     </section>
 
-    <section class="dashboard-analytics-grid dashboard-analytics-driver">
+    <section class="dashboard-analytics-grid dashboard-analytics-driver driver-card-row">
         <article class="chart-card score-card">
             <div>
                 <p class="app-kicker">Safety score</p>
@@ -108,7 +111,7 @@
             empty="No final review history is available yet."
         />
 
-        <article class="chart-card">
+        <article class="chart-card driver-incident-stat-card">
             <div>
                 <p class="app-kicker">Incident statistics</p>
                 <h2 class="section-title">My incident mix</h2>
@@ -133,7 +136,7 @@
             </div>
         </article>
 
-        <article class="dashboard-photo-card">
+        <article class="dashboard-photo-card driver-overview-photo-card xl:col-span-2">
             <img src="{{ $driverImage }}" alt="Driver view from inside a moving car">
             <div>
                 <p class="app-kicker">Trip safety</p>
@@ -143,7 +146,7 @@
         </article>
     </section>
 
-    <section class="workspace-panel">
+    <section class="workspace-panel driver-progress-panel">
         <div>
             <p class="app-kicker">Incident progress</p>
             <h2 class="section-title">Personal safety timeline</h2>
@@ -168,28 +171,11 @@
         </div>
     </section>
 
-    <section class="workspace-panel">
-        <div>
-            <p class="app-kicker">Notifications</p>
-            <h2 class="section-title">Driver attention panel</h2>
-        </div>
-
-        <div class="notification-list">
-            @foreach ($notificationItems as $item)
-                <div class="notification-item">
-                    <span class="notification-dot"></span>
-                    <div>
-                        <strong>{{ $item['title'] }}</strong>
-                        <small>{{ $item['copy'] }}</small>
-                    </div>
-                    <x-status-badge :status="$item['status']" />
-                </div>
-            @endforeach
-        </div>
-    </section>
-
-    <section class="dashboard-split-grid">
-        <article class="workspace-panel dashboard-panel-fill">
+    <section class="dashboard-split-grid driver-card-row">
+        <article @class([
+            'workspace-panel dashboard-panel-fill',
+            'xl:col-span-2' => $visibleNotificationItems->isEmpty(),
+        ])>
             <div>
                 <p class="app-kicker">Safety score guide</p>
                 <h2 class="section-title">How to read your score</h2>
@@ -213,7 +199,31 @@
             </div>
         </article>
 
-        <article class="workspace-panel dashboard-panel-fill">
+        @if ($visibleNotificationItems->isNotEmpty())
+            <article class="workspace-panel dashboard-panel-fill">
+                <div>
+                    <p class="app-kicker">Notifications</p>
+                    <h2 class="section-title">Driver attention panel</h2>
+                </div>
+
+                <div class="notification-list">
+                    @foreach ($visibleNotificationItems as $item)
+                        <div class="notification-item">
+                            <span class="notification-dot"></span>
+                            <div>
+                                <strong>{{ $item['title'] }}</strong>
+                                <small>{{ $item['copy'] }}</small>
+                            </div>
+                            <x-status-badge :status="$item['status']" />
+                        </div>
+                    @endforeach
+                </div>
+            </article>
+        @endif
+    </section>
+
+    @if ($recentIncidents->isNotEmpty())
+        <section class="workspace-panel">
             <div class="admin-header">
                 <div>
                     <p class="app-kicker">Recent activity</p>
@@ -223,7 +233,7 @@
             </div>
 
             <div class="compact-list">
-                @forelse ($recentIncidents as $incident)
+                @foreach ($recentIncidents as $incident)
                     <a class="compact-list-item" href="{{ route('incidents.show', $incident) }}">
                         <span>
                             <strong>{{ $incident->description }}</strong>
@@ -231,17 +241,12 @@
                         </span>
                         <x-status-badge :status="$incident->status" />
                     </a>
-                @empty
-                    <div class="empty-state">
-                        <strong>No active incidents yet.</strong>
-                        <span>Your submitted incidents will appear here after they are reported.</span>
-                    </div>
-                @endforelse
+                @endforeach
             </div>
-        </article>
-    </section>
+        </section>
+    @endif
 
-    <section class="workspace-panel">
+    <section class="workspace-panel driver-quick-actions-panel">
         <div>
             <p class="app-kicker">Quick actions</p>
             <h2 class="section-title">Driver workspace</h2>
@@ -276,27 +281,19 @@
                     <dd><x-status-badge :status="$driver->status" /></dd>
                 </div>
 
-                <div>
-                    <dt>Latest incident status</dt>
-                    <dd>
-                        @if ($latestIncident)
-                            <x-status-badge :status="$latestIncident->status" />
-                        @else
-                            No active incidents yet.
-                        @endif
-                    </dd>
-                </div>
+                @if ($latestIncident)
+                    <div>
+                        <dt>Latest incident status</dt>
+                        <dd><x-status-badge :status="$latestIncident->status" /></dd>
+                    </div>
 
-                <div>
-                    <dt>Latest incident</dt>
-                    <dd>
-                        @if ($latestIncident)
+                    <div>
+                        <dt>Latest incident</dt>
+                        <dd>
                             <a href="{{ route('incidents.show', $latestIncident) }}">{{ $latestIncident->description }}</a>
-                        @else
-                            No active incidents yet.
-                        @endif
-                    </dd>
-                </div>
+                        </dd>
+                    </div>
+                @endif
             </dl>
         @else
             <p class="section-copy">No driver profile is linked to your account yet. Dashboard counts will appear after an admin creates your driver profile.</p>

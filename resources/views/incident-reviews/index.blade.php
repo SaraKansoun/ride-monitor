@@ -93,7 +93,7 @@
                             <td>#{{ $review->incident->id }}</td>
                             <td>{{ $review->incident->driver->user->name }}</td>
                             <td>{{ $review->incident->vehicle?->plate_number ?? 'Not selected' }}</td>
-                            <td>{{ str_replace('_', ' ', $review->fault_decision) }}</td>
+                            <td>{{ \App\Models\IncidentReview::faultDecisionLabel($review->fault_decision) }}</td>
                             <td><x-status-badge :status="$review->is_active ? 'active' : 'inactive'" /></td>
                             <td>{{ $review->reviewer->name }}</td>
                             <td>{{ $review->reviewed_at->format('Y-m-d H:i') }}</td>
@@ -131,68 +131,6 @@
 
         <div class="admin-pagination">{{ $reviews->links() }}</div>
     @else
-        @if ($demoMode)
-            <section class="workspace-panel">
-                <div class="admin-header">
-                    <div>
-                        <p class="app-kicker">Demo testing mode</p>
-                        <h3 class="section-title">Analyze a sample dashcam video</h3>
-                        <p class="section-copy">Place demo videos in <code>storage/app/demo-videos</code>, then create a demo incident from one of the samples.</p>
-                    </div>
-                </div>
-
-                @if ($demoVideos === [])
-                    <p class="section-copy">No demo dashcam videos found yet.</p>
-                @else
-                    <form class="admin-form" method="POST" action="{{ route('ai-analyses.demo.store') }}">
-                        @csrf
-                        <div class="form-grid">
-                            <label class="form-field">
-                                <span>Sample video</span>
-                                <select name="video" required>
-                                    @foreach ($demoVideos as $video)
-                                        <option value="{{ $video }}">{{ $video }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-
-                            <label class="form-field">
-                                <span>Driver</span>
-                                <select name="driver_id" required>
-                                    @foreach ($demoDrivers as $driver)
-                                        <option value="{{ $driver->id }}">{{ $driver->user->name }} - {{ $driver->license_number }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-
-                            <label class="form-field">
-                                <span>Vehicle</span>
-                                <select name="vehicle_id">
-                                    <option value="">Not selected</option>
-                                    @foreach ($demoVehicles as $vehicle)
-                                        <option value="{{ $vehicle->id }}">{{ $vehicle->plate_number }} - {{ $vehicle->model }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-
-                            <label class="form-field">
-                                <span>Incident type</span>
-                                <select name="type" required>
-                                    @foreach ($demoTypes as $type)
-                                        <option value="{{ $type }}">{{ str($type)->replace('_', ' ')->title() }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-                        </div>
-
-                        <div class="form-actions">
-                            <button class="app-button app-button-primary" type="submit">Create demo analysis</button>
-                        </div>
-                    </form>
-                @endif
-            </section>
-        @endif
-
         <nav class="admin-filters" aria-label="AI analysis status filters">
             @foreach (['active' => 'Active', 'inactive' => 'Inactive', 'all' => 'All'] as $value => $label)
                 <a class="admin-filter-link @if ($aiStatus === $value) is-active @endif" href="{{ route('incident-reviews.index', ['tab' => 'ai', 'status' => $value]) }}">{{ $label }}</a>

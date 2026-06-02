@@ -166,7 +166,7 @@ test('incident detail shows final review state clearly', function () {
     $this->actingAs($monitor)
         ->get(route('incidents.show', $incident))
         ->assertSuccessful()
-        ->assertSeeText('shared fault')
+        ->assertSeeText('Shared fault')
         ->assertSeeText('Shared responsibility based on footage.');
 });
 

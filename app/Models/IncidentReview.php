@@ -28,6 +28,28 @@ class IncidentReview extends Model
         self::FAULT_UNCLEAR,
     ];
 
+    public static function faultDecisionLabel(?string $faultDecision): string
+    {
+        return match ($faultDecision) {
+            self::FAULT_DRIVER => 'Driver fault',
+            self::FAULT_OTHER_PARTY => 'Other party fault',
+            self::FAULT_SHARED => 'Shared fault',
+            self::FAULT_UNCLEAR => 'Unclear',
+            default => 'Pending',
+        };
+    }
+
+    public static function faultDecisionLabelWithScore(?string $faultDecision, float|int|string|null $score): string
+    {
+        $label = self::faultDecisionLabel($faultDecision);
+
+        if ($label === 'Pending' || ! is_numeric($score)) {
+            return $label;
+        }
+
+        return sprintf('%s (%s)', $label, number_format((float) $score, 2));
+    }
+
     /**
      * @var list<string>
      */

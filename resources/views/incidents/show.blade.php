@@ -101,13 +101,7 @@
         @if ($activeAiAnalysis)
             @php
                 $aiStatus = $activeAiAnalysis->status;
-                $suggestedFaultLabel = match ($activeAiAnalysis->suggested_fault_decision) {
-                    \App\Models\IncidentReview::FAULT_DRIVER => 'Possible driver fault',
-                    \App\Models\IncidentReview::FAULT_OTHER_PARTY => 'Possible other party fault',
-                    \App\Models\IncidentReview::FAULT_SHARED => 'Possible shared fault',
-                    \App\Models\IncidentReview::FAULT_UNCLEAR => 'Unclear',
-                    default => 'Pending',
-                };
+                $suggestedFaultLabel = \App\Models\IncidentReview::faultDecisionLabel($activeAiAnalysis->suggested_fault_decision);
                 $statusMessage = match ($aiStatus) {
                     \App\Models\AIAnalysis::STATUS_PENDING => 'The dashcam upload is queued for AI processing. Start the queue worker to process waiting jobs.',
                     \App\Models\AIAnalysis::STATUS_PROCESSING => 'The dashcam media is being processed locally. Important frames and risk signals are being prepared.',
@@ -205,7 +199,7 @@
 
         @if ($activeReview)
             <dl class="detail-grid">
-                <div><dt>Fault decision</dt><dd>{{ str_replace('_', ' ', $activeReview->fault_decision) }}</dd></div>
+                <div><dt>Fault decision</dt><dd>{{ \App\Models\IncidentReview::faultDecisionLabel($activeReview->fault_decision) }}</dd></div>
                 <div><dt>Reviewed by</dt><dd>{{ $activeReview->reviewer->name }}</dd></div>
                 <div><dt>Reviewed at</dt><dd>{{ $activeReview->reviewed_at->format('Y-m-d H:i') }}</dd></div>
                 <div><dt>Review status</dt><dd><x-status-badge status="active" /></dd></div>
@@ -216,6 +210,12 @@
         @endif
 
         @if ($canSubmitReview)
+            @php
+                $defaultFaultDecision = in_array($activeAiAnalysis?->suggested_fault_decision, \App\Models\IncidentReview::FAULT_DECISIONS, true)
+                    ? $activeAiAnalysis?->suggested_fault_decision
+                    : null;
+                $defaultReviewNotes = trim((string) ($activeAiAnalysis?->fault_reasoning ?: $activeAiAnalysis?->summary ?: ''));
+            @endphp
             <form class="admin-form" method="POST" action="{{ route('incidents.reviews.store', $incident) }}">
                 @csrf
                 <div class="form-grid">
@@ -223,7 +223,16 @@
                         Fault decision
                         <select name="fault_decision" required>
                             @foreach (\App\Models\IncidentReview::FAULT_DECISIONS as $decision)
-                                <option value="{{ $decision }}" @selected(old('fault_decision') === $decision)>{{ str_replace('_', ' ', $decision) }}</option>
+                                @php
+                                    $faultDecisionPenalty = app(\App\Services\DriverScoreService::class)
+                                        ->penaltyForDecision($decision, $incident->type);
+                                    $faultDecisionOptionLabel = sprintf(
+                                        '%s (%s)',
+                                        \App\Models\IncidentReview::faultDecisionLabel($decision),
+                                        $faultDecisionPenalty > 0 ? "-{$faultDecisionPenalty}" : '0',
+                                    );
+                                @endphp
+                                <option value="{{ $decision }}" @selected(old('fault_decision', $defaultFaultDecision) === $decision)>{{ $faultDecisionOptionLabel }}</option>
                             @endforeach
                         </select>
                         @error('fault_decision')
@@ -234,7 +243,7 @@
 
                 <label class="form-field">
                     Review notes
-                    <textarea name="notes" required>{{ old('notes') }}</textarea>
+                    <textarea name="notes" required>{{ old('notes', $defaultReviewNotes) }}</textarea>
                     @error('notes')
                         <span class="form-error">{{ $message }}</span>
                     @enderror

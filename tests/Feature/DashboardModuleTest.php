@@ -69,10 +69,14 @@ test('admin sees admin dashboard counts excluding inactive records by default', 
         ->assertSeeText('Fleet health')
         ->assertSeeText('Latest active incidents')
         ->assertSeeText('Quick actions')
+        ->assertSeeText('Manage users')
+        ->assertSeeText('Manage drivers')
+        ->assertSeeText('Assign vehicles')
+        ->assertSeeText('Taxi fleet command center')
         ->assertSeeText('Incidents Over Time')
-        ->assertSeeText(now()->format('M j').': 2')
+        ->assertSeeText(now()->format('M j'))
         ->assertSeeTextInOrder(['Total active users', '3'])
-        ->assertSeeTextInOrder(['Total inactive users', '1'])
+        ->assertDontSeeText('Total inactive users')
         ->assertSeeTextInOrder(['Total active drivers', '1'])
         ->assertSeeTextInOrder(['Total active vehicles', '1'])
         ->assertSeeTextInOrder(['Total active incidents', '2'])
@@ -120,8 +124,9 @@ test('monitor sees incident cards recent incidents and risky active drivers', fu
         ->assertSeeText('Review workload')
         ->assertSeeText('Pending reviews queue')
         ->assertSeeText('Lowest score watchlist')
+        ->assertSeeText('Reviews stay monitor-led')
         ->assertSeeText('Incidents Over Time')
-        ->assertSeeText(now()->format('M j').': 3')
+        ->assertSeeText(now()->format('M j'))
         ->assertSeeTextInOrder(['Pending incidents', '1'])
         ->assertSeeTextInOrder(['Incidents under review', '1'])
         ->assertSeeTextInOrder(['Resolved incidents', '1'])
@@ -166,6 +171,26 @@ test('monitor recent incident filter supports active inactive and all', function
         ->assertSuccessful()
         ->assertSeeText('Filter active dashboard incident')
         ->assertSeeText('Filter inactive dashboard incident');
+});
+
+test('monitor dashboard hides empty optional panels', function () {
+    $monitor = createUserWithRole('monitor');
+
+    $this->actingAs($monitor)
+        ->get(route('dashboard.monitor'))
+        ->assertSuccessful()
+        ->assertSeeText('Monitor workspace')
+        ->assertSeeText('Reviews stay monitor-led')
+        ->assertSeeText('Pending incidents')
+        ->assertDontSeeText('Incidents Over Time')
+        ->assertDontSeeText('Pending reviews queue')
+        ->assertDontSeeText('Lowest score watchlist')
+        ->assertDontSeeText('Recent incidents')
+        ->assertDontSeeText('Risky active drivers by lowest score')
+        ->assertDontSeeText('No pending reviews.')
+        ->assertDontSeeText('No active scores yet.')
+        ->assertDontSeeText('No incidents found for this filter.')
+        ->assertDontSeeText('No active driver scores are available yet.');
 });
 
 test('driver sees only own dashboard data and latest active incident status', function () {
@@ -258,11 +283,12 @@ test('driver sees only own dashboard data and latest active incident status', fu
         ->get(route('dashboard'))
         ->assertSuccessful()
         ->assertSeeText('Driver workspace')
+        ->assertSeeText('Focused driver overview')
         ->assertSeeText('Safety score guide')
         ->assertSeeText('Driver Safety Score Trend')
-        ->assertSeeText('Start: 100')
-        ->assertSeeText(now()->subDays(5)->format('M j').': 80')
-        ->assertSeeText(now()->subDays(4)->format('M j').': 70')
+        ->assertSeeText('Start')
+        ->assertSeeText(now()->subDays(5)->format('M j'))
+        ->assertSeeText(now()->subDays(4)->format('M j'))
         ->assertDontSeeText(now()->subDays(3)->format('M j').': 65')
         ->assertSeeText('My latest incidents')
         ->assertSeeText('Quick actions')
@@ -273,6 +299,23 @@ test('driver sees only own dashboard data and latest active incident status', fu
         ->assertSeeText('Latest active resolved own incident')
         ->assertDontSeeText('Newest inactive own incident')
         ->assertDontSeeText('Other driver dashboard incident');
+});
+
+test('driver dashboard hides empty optional incident panels', function () {
+    $driverUser = createUserWithRole('driver', ['name' => 'Driver Without Incidents']);
+    Driver::factory()->create(['user_id' => $driverUser->id]);
+
+    $this->actingAs($driverUser)
+        ->get(route('dashboard.driver'))
+        ->assertSuccessful()
+        ->assertSeeText('Driver workspace')
+        ->assertSeeText('Focused driver overview')
+        ->assertSeeText('My active incidents')
+        ->assertSeeText('Quick actions')
+        ->assertDontSeeText('My latest incidents')
+        ->assertDontSeeText('Latest incident status')
+        ->assertDontSeeText('Latest incident')
+        ->assertDontSeeText('No active incidents yet.');
 });
 
 test('driver dashboard handles users without a driver profile', function () {

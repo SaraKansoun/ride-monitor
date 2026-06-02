@@ -59,7 +59,7 @@
         </div>
     </section>
 
-    <section class="dashboard-grid">
+    <section class="dashboard-grid driver-metric-grid">
         <article class="summary-card dashboard-metric-card">
             <x-nav-icon name="safety" class="summary-icon" />
             <span class="summary-label">Current score</span>
@@ -89,7 +89,7 @@
         </article>
     </section>
 
-    <section class="dashboard-analytics-grid dashboard-analytics-driver">
+    <section class="dashboard-analytics-grid dashboard-analytics-driver driver-performance-equal-row">
         <article class="chart-card score-card performance-score-card">
             <div>
                 <p class="app-kicker">Score impact</p>
@@ -118,7 +118,7 @@
             </div>
         </article>
 
-        <article class="chart-card">
+        <article class="chart-card performance-status-card">
             <div>
                 <p class="app-kicker">Active incident statuses</p>
                 <h2 class="section-title">Review progress</h2>
@@ -170,7 +170,7 @@
         </article>
     </section>
 
-    <section class="dashboard-split-grid">
+    <section class="dashboard-split-grid driver-performance-equal-row">
         <article class="workspace-panel dashboard-panel-fill">
             <div>
                 <p class="app-kicker">Driver profile</p>
@@ -287,7 +287,7 @@
         </div>
     </section>
 
-    <section class="dashboard-split-grid">
+    <section class="dashboard-split-grid driver-performance-equal-row">
         <article class="workspace-panel dashboard-panel-fill">
             <div>
                 <p class="app-kicker">Score guide</p>

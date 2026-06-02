@@ -87,11 +87,6 @@
             </svg>
         </div>
 
-        <div class="line-chart-data">
-            @foreach ($pointCollection as $point)
-                <span>{{ $point['label'] }}: {{ $point['value'] }}</span>
-            @endforeach
-        </div>
     @else
         <div class="empty-state">
             <strong>{{ $empty }}</strong>

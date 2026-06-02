@@ -11,6 +11,13 @@
         $reviewTotal = max($pendingIncidents + $underReviewIncidents + $resolvedIncidents, 1);
         $completionRate = (int) round(($resolvedIncidents / $reviewTotal) * 100);
         $monitorImage = 'https://images.unsplash.com/photo-1493238792000-8113da705763?auto=format&fit=crop&w=1400&q=80';
+        $hasIncidentTrend = collect($incidentTrendPoints)->contains(fn (array $point): bool => (int) ($point['value'] ?? 0) > 0);
+        $visibleNotificationItems = collect($notificationItems)
+            ->reject(fn (array $item): bool => ($item['status'] ?? null) === 'completed')
+            ->values();
+        $monitorAnalyticsCardCount = 2
+            + ($pendingReviewIncidents->isNotEmpty() ? 1 : 0)
+            + ($riskyDrivers->isNotEmpty() ? 1 : 0);
     @endphp
 
     <section class="dashboard-hero dashboard-hero-monitor">
@@ -45,7 +52,7 @@
         </div>
     </section>
 
-    <section class="dashboard-grid">
+    <section class="dashboard-grid monitor-metric-grid">
         @foreach ($metrics as $metric)
             @php
                 $cardIcon = match ($metric['label']) {
@@ -64,41 +71,40 @@
         @endforeach
     </section>
 
-    <section class="dashboard-analytics-grid">
-        <x-line-chart
-            class="xl:col-span-3"
-            title="Incidents Over Time"
-            kicker="Trend analytics"
-            copy="Active incident reports created during the last 14 days."
-            :points="$incidentTrendPoints"
-            empty="No active incidents were reported in the last 14 days."
-        />
-    </section>
+    @if ($hasIncidentTrend)
+        <section class="dashboard-line-section">
+            <x-line-chart
+                class="xl:col-span-3"
+                title="Incidents Over Time"
+                kicker="Trend analytics"
+                copy="Active incident reports created during the last 14 days."
+                :points="$incidentTrendPoints"
+                empty="No active incidents were reported in the last 14 days."
+            />
+        </section>
+    @endif
 
-    <section class="dashboard-analytics-grid">
-        <article class="chart-card">
-            <div>
-                <p class="app-kicker">Review workload</p>
-                <h2 class="section-title">Pending reviews queue</h2>
-            </div>
+    <section class="dashboard-analytics-grid monitor-analytics-grid">
+        @if ($pendingReviewIncidents->isNotEmpty())
+            <article class="chart-card">
+                <div>
+                    <p class="app-kicker">Review workload</p>
+                    <h2 class="section-title">Pending reviews queue</h2>
+                </div>
 
-            <div class="compact-list">
-                @forelse ($pendingReviewIncidents as $incident)
-                    <a class="compact-list-item" href="{{ route('incidents.show', $incident) }}">
-                        <span>
-                            <strong>{{ $incident->description }}</strong>
-                            <small>{{ $incident->driver?->user?->name ?? 'Unassigned driver' }} - {{ $incident->vehicle?->plate_number ?? 'No vehicle' }}</small>
-                        </span>
-                        <x-status-badge :status="$incident->status" />
-                    </a>
-                @empty
-                    <div class="empty-state">
-                        <strong>No pending reviews.</strong>
-                        <span>All active incidents currently have a final review or no open workload.</span>
-                    </div>
-                @endforelse
-            </div>
-        </article>
+                <div class="compact-list">
+                    @foreach ($pendingReviewIncidents as $incident)
+                        <a class="compact-list-item" href="{{ route('incidents.show', $incident) }}">
+                            <span>
+                                <strong>{{ $incident->description }}</strong>
+                                <small>{{ $incident->driver?->user?->name ?? 'Unassigned driver' }} - {{ $incident->vehicle?->plate_number ?? 'No vehicle' }}</small>
+                            </span>
+                            <x-status-badge :status="$incident->status" />
+                        </a>
+                    @endforeach
+                </div>
+            </article>
+        @endif
 
         <article class="chart-card chart-card-feature">
             <div>
@@ -131,31 +137,31 @@
             </div>
         </article>
 
-        <article class="chart-card">
-            <div>
-                <p class="app-kicker">Safety attention</p>
-                <h2 class="section-title">Lowest score watchlist</h2>
-            </div>
+        @if ($riskyDrivers->isNotEmpty())
+            <article class="chart-card">
+                <div>
+                    <p class="app-kicker">Safety attention</p>
+                    <h2 class="section-title">Lowest score watchlist</h2>
+                </div>
 
-            <div class="driver-card-list">
-                @forelse ($riskyDrivers as $driver)
-                    <div class="driver-mini-card">
-                        <div>
-                            <strong>{{ $driver->user?->name ?? 'Unassigned user' }}</strong>
-                            <span>{{ $driver->score?->total_incidents ?? 0 }} reviewed incidents - {{ $driver->score?->unsafe_events ?? 0 }} unsafe events</span>
+                <div class="driver-card-list">
+                    @foreach ($riskyDrivers as $driver)
+                        <div class="driver-mini-card">
+                            <div>
+                                <strong>{{ $driver->user?->name ?? 'Unassigned user' }}</strong>
+                                <span>{{ $driver->score?->total_incidents ?? 0 }} reviewed incidents - {{ $driver->score?->unsafe_events ?? 0 }} unsafe events</span>
+                            </div>
+                            <b>{{ $driver->score?->score ?? 100 }}</b>
                         </div>
-                        <b>{{ $driver->score?->score ?? 100 }}</b>
-                    </div>
-                @empty
-                    <div class="empty-state">
-                        <strong>No active scores yet.</strong>
-                        <span>Driver safety scores will appear after active driver profiles are available.</span>
-                    </div>
-                @endforelse
-            </div>
-        </article>
+                    @endforeach
+                </div>
+            </article>
+        @endif
 
-        <article class="dashboard-photo-card">
+        <article @class([
+            'dashboard-photo-card',
+            'xl:col-span-2' => $monitorAnalyticsCardCount % 2 === 1,
+        ])>
             <img src="{{ $monitorImage }}" alt="Car dashboard and city driving view">
             <div>
                 <p class="app-kicker">Human decision</p>
@@ -165,105 +171,103 @@
         </article>
     </section>
 
-    <section class="workspace-panel">
-        <div>
-            <p class="app-kicker">Notifications</p>
-            <h2 class="section-title">Monitor attention panel</h2>
-        </div>
-
-        <div class="notification-list">
-            @foreach ($notificationItems as $item)
-                <div class="notification-item">
-                    <span class="notification-dot"></span>
-                    <div>
-                        <strong>{{ $item['title'] }}</strong>
-                        <small>{{ $item['copy'] }}</small>
-                    </div>
-                    <x-status-badge :status="$item['status']" />
-                </div>
-            @endforeach
-        </div>
-    </section>
-
-    <section class="workspace-panel">
-        <div class="admin-header">
+    @if ($visibleNotificationItems->isNotEmpty())
+        <section class="workspace-panel">
             <div>
-                <p class="app-kicker">Monitor dashboard</p>
-                <h2 class="section-title">Recent incidents</h2>
+                <p class="app-kicker">Notifications</p>
+                <h2 class="section-title">Monitor attention panel</h2>
             </div>
-        </div>
 
-        <div class="admin-filters">
-            @foreach (['active' => 'Active', 'inactive' => 'Inactive', 'all' => 'All'] as $filter => $label)
-                <a class="admin-filter-link @if ($status === $filter) is-active @endif" href="{{ route('dashboard.monitor', ['status' => $filter]) }}">
-                    {{ $label }}
-                </a>
-            @endforeach
-        </div>
+            <div class="notification-list">
+                @foreach ($visibleNotificationItems as $item)
+                    <div class="notification-item">
+                        <span class="notification-dot"></span>
+                        <div>
+                            <strong>{{ $item['title'] }}</strong>
+                            <small>{{ $item['copy'] }}</small>
+                        </div>
+                        <x-status-badge :status="$item['status']" />
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
 
-        <div class="admin-table-wrap">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Incident</th>
-                        <th>Driver</th>
-                        <th>Vehicle</th>
-                        <th>Status</th>
-                        <th>Reported</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($recentIncidents as $incident)
-                        <tr>
-                            <td><a href="{{ route('incidents.show', $incident) }}">{{ $incident->description }}</a></td>
-                            <td>{{ $incident->driver?->user?->name ?? 'Unassigned' }}</td>
-                            <td>{{ $incident->vehicle?->plate_number ?? 'Unassigned' }}</td>
-                            <td><x-status-badge :status="$incident->status" /></td>
-                            <td>{{ $incident->created_at?->format('Y-m-d H:i') }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5">No incidents found for this filter.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </section>
+    @if ($recentIncidents->isNotEmpty())
+        <section class="workspace-panel">
+            <div class="admin-header">
+                <div>
+                    <p class="app-kicker">Monitor dashboard</p>
+                    <h2 class="section-title">Recent incidents</h2>
+                </div>
+            </div>
 
-    <section class="workspace-panel">
-        <div>
-            <p class="app-kicker">Safety attention</p>
-            <h2 class="section-title">Risky active drivers by lowest score</h2>
-        </div>
+            <div class="admin-filters">
+                @foreach (['active' => 'Active', 'inactive' => 'Inactive', 'all' => 'All'] as $filter => $label)
+                    <a class="admin-filter-link @if ($status === $filter) is-active @endif" href="{{ route('dashboard.monitor', ['status' => $filter]) }}">
+                        {{ $label }}
+                    </a>
+                @endforeach
+            </div>
 
-        <div class="admin-table-wrap">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Driver</th>
-                        <th>Status</th>
-                        <th>Current score</th>
-                        <th>Total incidents</th>
-                        <th>Unsafe events</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($riskyDrivers as $driver)
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
                         <tr>
-                            <td>{{ $driver->user?->name ?? 'Unassigned user' }}</td>
-                            <td><x-status-badge :status="$driver->status" /></td>
-                            <td>{{ $driver->score?->score ?? 100 }}</td>
-                            <td>{{ $driver->score?->total_incidents ?? 0 }}</td>
-                            <td>{{ $driver->score?->unsafe_events ?? 0 }}</td>
+                            <th>Incident</th>
+                            <th>Driver</th>
+                            <th>Vehicle</th>
+                            <th>Status</th>
+                            <th>Reported</th>
                         </tr>
-                    @empty
+                    </thead>
+                    <tbody>
+                        @foreach ($recentIncidents as $incident)
+                            <tr>
+                                <td><a href="{{ route('incidents.show', $incident) }}">{{ $incident->description }}</a></td>
+                                <td>{{ $incident->driver?->user?->name ?? 'Unassigned' }}</td>
+                                <td>{{ $incident->vehicle?->plate_number ?? 'Unassigned' }}</td>
+                                <td><x-status-badge :status="$incident->status" /></td>
+                                <td>{{ $incident->created_at?->format('Y-m-d H:i') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    @endif
+
+    @if ($riskyDrivers->isNotEmpty())
+        <section class="workspace-panel">
+            <div>
+                <p class="app-kicker">Safety attention</p>
+                <h2 class="section-title">Risky active drivers by lowest score</h2>
+            </div>
+
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
                         <tr>
-                            <td colspan="5">No active driver scores are available yet.</td>
+                            <th>Driver</th>
+                            <th>Status</th>
+                            <th>Current score</th>
+                            <th>Total incidents</th>
+                            <th>Unsafe events</th>
                         </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </section>
+                    </thead>
+                    <tbody>
+                        @foreach ($riskyDrivers as $driver)
+                            <tr>
+                                <td>{{ $driver->user?->name ?? 'Unassigned user' }}</td>
+                                <td><x-status-badge :status="$driver->status" /></td>
+                                <td>{{ $driver->score?->score ?? 100 }}</td>
+                                <td>{{ $driver->score?->total_incidents ?? 0 }}</td>
+                                <td>{{ $driver->score?->unsafe_events ?? 0 }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    @endif
 @endsection
